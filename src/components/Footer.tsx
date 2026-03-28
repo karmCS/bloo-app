@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-white border-t border-gray-200 py-8 mt-16">
       <div className="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="text-2xl font-bold text-primary">bloo</div>
+        <div className="text-2xl font-bold text-primary font-brand">bloo</div>
         <a
           href="https://instagram.com"
           target="_blank"

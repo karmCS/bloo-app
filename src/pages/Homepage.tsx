@@ -48,7 +48,7 @@ export default function Homepage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <UtensilsCrossed className="text-primary" size={32} />
-              <h1 className="text-3xl font-bold text-primary">bloo</h1>
+              <h1 className="text-3xl font-bold text-primary font-brand">bloo</h1>
             </div>
             <p className="text-sm leading-relaxed text-slate-500 hidden sm:block">
               This week's curated meals

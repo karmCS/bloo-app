@@ -201,7 +201,7 @@ export default function AdminPanel() {
         <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
           <div className="flex items-center justify-center gap-2 mb-6">
             <UtensilsCrossed className="text-primary" size={32} />
-            <h1 className="text-2xl font-bold text-primary">bloo Admin</h1>
+            <h1 className="text-2xl font-bold text-primary font-brand">bloo Admin</h1>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -251,7 +251,7 @@ export default function AdminPanel() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <UtensilsCrossed className="text-primary" size={32} />
-              <h1 className="text-3xl font-bold text-primary">bloo Admin</h1>
+              <h1 className="text-3xl font-bold text-primary font-brand">bloo Admin</h1>
             </div>
             <Button onClick={handleLogout} variant="secondary">
               <LogOut size={18} className="mr-2" />

@@ -22,8 +22,8 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
         </div>
         <div className="p-6">
           <div className="mb-4">
-            <h2 className="text-3xl font-bold text-text mb-2">{meal.name}</h2>
-            <p className="text-sm text-slate-500">{meal.vendor}</p>
+            <h2 className="text-3xl font-bold text-text mb-2 font-meal">{meal.name}</h2>
+            <p className="text-sm text-slate-500 font-vendor">{meal.vendor}</p>
           </div>
 
           {meal.dietary_tags.length > 0 && (

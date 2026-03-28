@@ -19,8 +19,8 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
         />
       </div>
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-text mb-1">{meal.name}</h3>
-        <p className="text-sm text-slate-500 mb-3">{meal.vendor}</p>
+        <h3 className="text-lg font-semibold text-text mb-1 font-meal">{meal.name}</h3>
+        <p className="text-sm text-slate-500 mb-3 font-vendor">{meal.vendor}</p>
         <div className="grid grid-cols-2 gap-2">
           <div className="text-center">
             <div className="text-xs uppercase tracking-widest text-gray-500 mb-0.5">Cal</div>

@@ -13,7 +13,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         brand: ['Josefin Sans', 'sans-serif'],
-        meal: ['Cormorant Garamond', 'serif'],
+        meal: ['DM Sans', 'sans-serif'],
         vendor: ['Jost', 'sans-serif'],
       },
     },

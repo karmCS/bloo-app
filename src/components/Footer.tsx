@@ -9,10 +9,10 @@ export default function Footer() {
           href="https://instagram.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
+          className="flex items-center gap-2 text-slate-500 hover:text-primary transition-colors"
         >
           <Instagram size={20} />
-          <span className="text-sm">Follow us</span>
+          <span className="text-sm leading-relaxed">Follow us</span>
         </a>
       </div>
     </footer>

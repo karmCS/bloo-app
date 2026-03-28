@@ -205,7 +205,7 @@ export default function AdminPanel() {
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                 Email
               </label>
               <input
@@ -217,7 +217,7 @@ export default function AdminPanel() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                 Password
               </label>
               <input
@@ -234,7 +234,7 @@ export default function AdminPanel() {
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="w-full text-sm text-gray-600 hover:text-primary transition-colors"
+              className="w-full text-sm leading-relaxed text-slate-500 hover:text-primary transition-colors"
             >
               Back to Homepage
             </button>
@@ -263,7 +263,7 @@ export default function AdminPanel() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-2xl font-semibold text-text">Manage Meals</h2>
+          <h2 className="text-2xl font-bold text-text">Manage Meals</h2>
           <Button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-2"
@@ -275,13 +275,13 @@ export default function AdminPanel() {
 
         {showForm && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 className="text-xl font-semibold text-text mb-4">
+            <h3 className="text-2xl font-bold text-text mb-4">
               {editingMeal ? 'Edit Meal' : 'Add New Meal'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Meal Name
                   </label>
                   <input
@@ -295,7 +295,7 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Vendor
                   </label>
                   <input
@@ -327,7 +327,7 @@ export default function AdminPanel() {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Calories
                   </label>
                   <input
@@ -341,7 +341,7 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Protein (g)
                   </label>
                   <input
@@ -355,7 +355,7 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Carbs (g)
                   </label>
                   <input
@@ -369,7 +369,7 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Fats (g)
                   </label>
                   <input
@@ -401,7 +401,7 @@ export default function AdminPanel() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Week ID (e.g., 2024-W12)
                   </label>
                   <input
@@ -415,7 +415,7 @@ export default function AdminPanel() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
                     Dietary Tags (comma-separated)
                   </label>
                   <input
@@ -448,7 +448,7 @@ export default function AdminPanel() {
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {meals.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-sm leading-relaxed text-slate-500">
               No meals added yet. Click "Add Meal" to get started.
             </div>
           ) : (
@@ -456,19 +456,19 @@ export default function AdminPanel() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
                       Meal
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
                       Vendor
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
                       Week
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
                       Macros
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-widest text-gray-500">
                       Actions
                     </th>
                   </tr>
@@ -483,18 +483,18 @@ export default function AdminPanel() {
                             alt={meal.name}
                             className="w-12 h-12 rounded object-cover mr-3"
                           />
-                          <div className="text-sm font-medium text-text">
+                          <div className="text-lg font-semibold text-text">
                             {meal.name}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {meal.vendor}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm leading-relaxed text-gray-600">
                         {meal.week_id}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm leading-relaxed text-gray-600">
                         {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C |{' '}
                         {meal.fats}g F
                       </td>

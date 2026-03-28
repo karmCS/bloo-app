@@ -50,7 +50,7 @@ export default function Homepage() {
               <UtensilsCrossed className="text-primary" size={32} />
               <h1 className="text-3xl font-bold text-primary">bloo</h1>
             </div>
-            <p className="text-sm text-gray-600 hidden sm:block">
+            <p className="text-sm leading-relaxed text-slate-500 hidden sm:block">
               This week's curated meals
             </p>
           </div>
@@ -65,10 +65,10 @@ export default function Homepage() {
         ) : meals.length === 0 ? (
           <div className="text-center py-16">
             <UtensilsCrossed className="mx-auto text-gray-400 mb-4" size={64} />
-            <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">
               No meals available yet
             </h2>
-            <p className="text-gray-500">Check back soon for this week's curated meals!</p>
+            <p className="text-sm leading-relaxed text-slate-500">Check back soon for this week's curated meals!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

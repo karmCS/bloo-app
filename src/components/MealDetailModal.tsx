@@ -23,7 +23,7 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
         <div className="p-6">
           <div className="mb-4">
             <h2 className="text-3xl font-bold text-text mb-2">{meal.name}</h2>
-            <p className="text-lg text-gray-600">{meal.vendor}</p>
+            <p className="text-sm text-slate-500">{meal.vendor}</p>
           </div>
 
           {meal.dietary_tags.length > 0 && (
@@ -40,34 +40,34 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
           )}
 
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-text mb-3">Nutrition Facts</h3>
+            <h3 className="text-2xl font-bold text-text mb-4">Nutrition Facts</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-background rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{meal.calories}</div>
-                <div className="text-sm text-gray-600 mt-1">Calories</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Calories</div>
+                <div className="font-bold text-base text-primary">{meal.calories}</div>
               </div>
               <div className="bg-background rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{meal.protein}g</div>
-                <div className="text-sm text-gray-600 mt-1">Protein</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Protein</div>
+                <div className="font-bold text-base text-primary">{meal.protein}g</div>
               </div>
               <div className="bg-background rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{meal.carbs}g</div>
-                <div className="text-sm text-gray-600 mt-1">Carbs</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Carbs</div>
+                <div className="font-bold text-base text-primary">{meal.carbs}g</div>
               </div>
               <div className="bg-background rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{meal.fats}g</div>
-                <div className="text-sm text-gray-600 mt-1">Fats</div>
+                <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">Fats</div>
+                <div className="font-bold text-base text-primary">{meal.fats}g</div>
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-lg font-semibold text-text mb-3">Ingredients</h3>
+            <h3 className="text-2xl font-bold text-text mb-4">Ingredients</h3>
             <ul className="space-y-2">
               {meal.ingredients.map((ingredient, index) => (
                 <li key={index} className="flex items-start">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent mt-2 mr-3"></span>
-                  <span className="text-gray-700">{ingredient}</span>
+                  <span className="text-sm leading-relaxed text-gray-700">{ingredient}</span>
                 </li>
               ))}
             </ul>

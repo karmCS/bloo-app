@@ -70,7 +70,7 @@ export default function Homepage() {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/60"></div>
               </div>
 
-              <div className="relative h-full flex flex-col justify-end pb-24 px-6">
+              <div className="relative h-full flex flex-col justify-end pb-12 px-6">
                 <div className="max-w-7xl mx-auto w-full">
                   <div className="max-w-2xl">
                     <h2 className="text-5xl md:text-7xl font-bold text-white mb-4 font-meal leading-tight">
@@ -105,9 +105,9 @@ export default function Homepage() {
             </div>
           )}
 
-          <section className="max-w-7xl mx-auto px-6 py-20">
+          <section className="max-w-7xl mx-auto px-6 pt-20 pb-20">
             <div className="mb-12">
-              <h3 className="text-4xl font-bold text-gray-900 mb-3 font-meal">
+              <h3 className="text-4xl font-bold text-gray-900 mb-4 font-meal">
                 This Week's Menu
               </h3>
               <p className="text-gray-600 text-lg">

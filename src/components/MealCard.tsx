@@ -9,7 +9,7 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group border border-gray-100"
+      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 cursor-pointer group border border-gray-100"
     >
       <div className="aspect-[4/3] overflow-hidden bg-gray-100">
         <img
@@ -22,11 +22,11 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
         <h3 className="text-2xl font-bold text-gray-900 mb-2 font-meal group-hover:text-primary transition-colors duration-300">
           {meal.name}
         </h3>
-        <p className="text-base text-gray-600 mb-6 font-vendor tracking-wide">
+        <p className="text-base text-gray-600 font-vendor tracking-wide">
           {meal.vendor}
         </p>
 
-        <div className="flex justify-between items-center mb-5 pb-5 border-b border-gray-100">
+        <div className="flex justify-between items-center mt-6 mb-5 pb-5 border-b border-gray-100">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-primary">{meal.calories}</span>
             <span className="text-sm text-gray-500 uppercase tracking-wider">cal</span>

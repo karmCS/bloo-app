@@ -27,7 +27,7 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
 
         <button
           onClick={onClose}
-          className="fixed top-6 right-6 z-10 p-3 bg-white/10 backdrop-blur-md text-white rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
+          className="fixed top-6 right-6 z-20 p-3 bg-white/10 backdrop-blur-md text-white rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
         >
           <X size={24} />
         </button>

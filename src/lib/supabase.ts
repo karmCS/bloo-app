@@ -24,6 +24,7 @@ export interface Meal {
   id: string;
   name: string;
   vendor: string;
+  description?: string;
   image_url: string;
   calories: number;
   protein: number;

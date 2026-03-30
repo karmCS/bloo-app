@@ -17,6 +17,7 @@ export default function AdminPanel() {
   const [formData, setFormData] = useState({
     name: '',
     vendor: '',
+    description: '',
     image_url: '',
     calories: '',
     protein: '',
@@ -69,6 +70,7 @@ export default function AdminPanel() {
       const mealData = {
         name: formData.name,
         vendor: formData.vendor,
+        description: formData.description || null,
         image_url: imageUrl,
         calories: parseInt(formData.calories) || 0,
         protein: parseInt(formData.protein) || 0,
@@ -105,6 +107,7 @@ export default function AdminPanel() {
     setFormData({
       name: meal.name,
       vendor: meal.vendor,
+      description: meal.description || '',
       image_url: meal.image_url,
       calories: meal.calories.toString(),
       protein: meal.protein.toString(),
@@ -132,6 +135,7 @@ export default function AdminPanel() {
     setFormData({
       name: '',
       vendor: '',
+      description: '',
       image_url: '',
       calories: '',
       protein: '',
@@ -221,6 +225,30 @@ export default function AdminPanel() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                     placeholder="Fresh Kitchen Co."
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 500) {
+                      setFormData({ ...formData, description: value });
+                    }
+                  }}
+                  rows={3}
+                  maxLength={500}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
+                  placeholder="Highlight what makes this meal special - ingredients, preparation style, or story..."
+                />
+                <div className="flex justify-end mt-1">
+                  <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-gray-500'}`}>
+                    {formData.description.length}/500
+                  </span>
                 </div>
               </div>
 

@@ -26,6 +26,12 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
           {meal.vendor}
         </p>
 
+        {meal.description && (
+          <p className="text-sm text-gray-600 mt-3 leading-relaxed line-clamp-2">
+            {meal.description}
+          </p>
+        )}
+
         <div className="flex justify-between items-center mt-6 mb-5 pb-5 border-b border-gray-100">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-primary">{meal.calories}</span>

@@ -6,14 +6,9 @@ import { useNavigate } from 'react-router-dom';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(true);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
-
   const [formData, setFormData] = useState({
     name: '',
     vendor: '',
@@ -28,62 +23,8 @@ export default function AdminPanel() {
   });
 
   useEffect(() => {
-    checkAuth();
+    fetchMeals();
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchMeals();
-    }
-  }, [isAuthenticated]);
-
-  const checkAuth = async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session) {
-        const { data: adminUser } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        setIsAuthenticated(!!adminUser);
-      }
-    } catch (error) {
-      console.error('Auth check error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      await checkAuth();
-    } catch (error) {
-      alert('Login failed. Please check your credentials.');
-      console.error('Login error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsAuthenticated(false);
-    navigate('/');
-  };
 
   const fetchMeals = async () => {
     try {
@@ -91,7 +32,6 @@ export default function AdminPanel() {
         .from('meals')
         .select('*')
         .order('created_at', { ascending: false });
-
       if (error) throw error;
       setMeals(data || []);
     } catch (error) {
@@ -99,9 +39,13 @@ export default function AdminPanel() {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const mealData = {
       name: formData.name,
       vendor: formData.vendor,
@@ -123,14 +67,11 @@ export default function AdminPanel() {
           .from('meals')
           .update(mealData)
           .eq('id', editingMeal.id);
-
         if (error) throw error;
       } else {
         const { error } = await supabase.from('meals').insert([mealData]);
-
         if (error) throw error;
       }
-
       resetForm();
       fetchMeals();
     } catch (error) {
@@ -158,10 +99,8 @@ export default function AdminPanel() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this meal?')) return;
-
     try {
       const { error } = await supabase.from('meals').delete().eq('id', id);
-
       if (error) throw error;
       fetchMeals();
     } catch (error) {
@@ -186,63 +125,6 @@ export default function AdminPanel() {
     setEditingMeal(null);
     setShowForm(false);
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <UtensilsCrossed className="text-primary" size={32} />
-            <h1 className="text-2xl font-bold text-primary font-brand">bloo Admin</h1>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="w-full text-sm leading-relaxed text-slate-500 hover:text-primary transition-colors"
-            >
-              Back to Homepage
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -287,9 +169,7 @@ export default function AdminPanel() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
@@ -301,9 +181,7 @@ export default function AdminPanel() {
                   <input
                     type="text"
                     value={formData.vendor}
-                    onChange={(e) =>
-                      setFormData({ ...formData, vendor: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
@@ -317,71 +195,27 @@ export default function AdminPanel() {
                 <input
                   type="url"
                   value={formData.image_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image_url: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                    Calories
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.calories}
-                    onChange={(e) =>
-                      setFormData({ ...formData, calories: e.target.value })
-                    }
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                    Protein (g)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.protein}
-                    onChange={(e) =>
-                      setFormData({ ...formData, protein: e.target.value })
-                    }
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                    Carbs (g)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.carbs}
-                    onChange={(e) =>
-                      setFormData({ ...formData, carbs: e.target.value })
-                    }
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                    Fats (g)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.fats}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fats: e.target.value })
-                    }
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
+                {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
+                  <div key={field}>
+                    <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
+                      {field === 'calories' ? 'Calories' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
+                    </label>
+                    <input
+                      type="number"
+                      value={formData[field]}
+                      onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+                ))}
               </div>
 
               <div>
@@ -390,9 +224,7 @@ export default function AdminPanel() {
                 </label>
                 <textarea
                   value={formData.ingredients}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ingredients: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
                   required
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -407,9 +239,7 @@ export default function AdminPanel() {
                   <input
                     type="text"
                     value={formData.week_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, week_id: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, week_id: e.target.value })}
                     required
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
@@ -421,9 +251,7 @@ export default function AdminPanel() {
                   <input
                     type="text"
                     value={formData.dietary_tags}
-                    onChange={(e) =>
-                      setFormData({ ...formData, dietary_tags: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
                     placeholder="vegan, keto, gluten-free"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
@@ -434,11 +262,7 @@ export default function AdminPanel() {
                 <Button type="submit">
                   {editingMeal ? 'Update Meal' : 'Add Meal'}
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={resetForm}
-                >
+                <Button type="button" variant="secondary" onClick={resetForm}>
                   Cancel
                 </Button>
               </div>
@@ -456,21 +280,14 @@ export default function AdminPanel() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
-                      Meal
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
-                      Vendor
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
-                      Week
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-widest text-gray-500">
-                      Macros
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-widest text-gray-500">
-                      Actions
-                    </th>
+                    {['Meal', 'Vendor', 'Week', 'Macros', 'Actions'].map((h) => (
+                      <th
+                        key={h}
+                        className={`px-6 py-3 text-xs font-medium uppercase tracking-widest text-gray-500 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -483,20 +300,17 @@ export default function AdminPanel() {
                             alt={meal.name}
                             className="w-12 h-12 rounded object-cover mr-3"
                           />
-                          <div className="text-lg font-semibold text-text">
-                            {meal.name}
-                          </div>
+                          <div className="text-lg font-semibold text-text">{meal.name}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {meal.vendor}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm leading-relaxed text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {meal.week_id}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm leading-relaxed text-gray-600">
-                        {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C |{' '}
-                        {meal.fats}g F
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C | {meal.fats}g F
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button

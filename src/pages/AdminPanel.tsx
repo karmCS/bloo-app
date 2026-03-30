@@ -108,13 +108,16 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+      <header className="bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <UtensilsCrossed className="text-primary" size={32} />
-              <h1 className="text-3xl font-bold text-primary font-brand">bloo Admin</h1>
+              <UtensilsCrossed className="text-primary" size={28} />
+              <div>
+                <h1 className="text-2xl font-bold text-primary font-brand tracking-wide">bloo</h1>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Admin Portal</p>
+              </div>
             </div>
             <Button onClick={handleLogout} variant="secondary">
               <LogOut size={18} className="mr-2" />
@@ -124,27 +127,30 @@ export default function AdminPanel() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-text">Manage Meals</h2>
+      <main className="max-w-7xl mx-auto px-6 py-10">
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Manage Meals</h2>
+            <p className="text-gray-600">Create and manage your weekly menu</p>
+          </div>
           <Button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 px-6 py-3"
           >
-            <Plus size={18} />
-            {showForm ? 'Cancel' : 'Add Meal'}
+            <Plus size={20} />
+            {showForm ? 'Cancel' : 'Add New Meal'}
           </Button>
         </div>
 
         {showForm && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 className="text-2xl font-bold text-text mb-4">
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-10 border border-gray-100">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 font-meal">
               {editingMeal ? 'Edit Meal' : 'Add New Meal'}
             </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Meal Name
                   </label>
                   <input
@@ -152,11 +158,12 @@ export default function AdminPanel() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    placeholder="Grilled Salmon Bowl"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Vendor
                   </label>
                   <input
@@ -164,13 +171,14 @@ export default function AdminPanel() {
                     value={formData.vendor}
                     onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                    placeholder="Fresh Kitchen Co."
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Image URL
                 </label>
                 <input
@@ -178,58 +186,77 @@ export default function AdminPanel() {
                   value={formData.image_url}
                   onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                  placeholder="https://images.pexels.com/..."
                 />
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
-                  <div key={field}>
-                    <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                      {field === 'calories' ? 'Calories' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
-                    </label>
-                    <input
-                      type="number"
-                      value={formData[field]}
-                      onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                {formData.image_url && (
+                  <div className="mt-3">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   </div>
-                ))}
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Nutrition Information
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
+                    <div key={field}>
+                      <label className="block text-xs uppercase tracking-wider text-gray-500 mb-2 font-medium">
+                        {field === 'calories' ? 'Calories' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
+                      </label>
+                      <input
+                        type="number"
+                        value={formData[field]}
+                        onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Ingredients (comma-separated)
                 </label>
                 <textarea
                   value={formData.ingredients}
                   onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
                   required
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
+                  placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
                 />
               </div>
 
               <div>
-                <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                  Dietary Tags (comma-separated)
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Dietary Tags (comma-separated, optional)
                 </label>
                 <input
                   type="text"
                   value={formData.dietary_tags}
                   onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
-                  placeholder="vegan, keto, gluten-free"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="keto, gluten-free, high-protein"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                 />
               </div>
 
-              <div className="flex gap-3">
-                <Button type="submit">
+              <div className="flex gap-3 pt-4">
+                <Button type="submit" className="px-8 py-3">
                   {editingMeal ? 'Update Meal' : 'Add Meal'}
                 </Button>
-                <Button type="button" variant="secondary" onClick={resetForm}>
+                <Button type="button" variant="secondary" onClick={resetForm} className="px-8 py-3">
                   Cancel
                 </Button>
               </div>
@@ -237,77 +264,78 @@ export default function AdminPanel() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           {meals.length === 0 ? (
-            <div className="p-8 text-center text-sm leading-relaxed text-slate-500">
-              No meals added yet. Click "Add Meal" to get started.
+            <div className="p-16 text-center">
+              <UtensilsCrossed className="mx-auto text-gray-300 mb-4" size={64} />
+              <p className="text-gray-500 text-lg">No meals added yet. Click "Add New Meal" to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
                   <tr>
                     {['Meal', 'Vendor', 'Macros', 'Actions'].map((h) => (
                       <th
                         key={h}
-                        className={`px-6 py-3 text-xs font-medium uppercase tracking-widest text-gray-500 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
+                        className={`px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
                       >
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-100">
                   {meals.map((meal) => (
-                    <tr key={meal.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <tr key={meal.id} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="px-6 py-5 whitespace-nowrap">
                         <div className="flex items-center">
                           <img
                             src={meal.image_url}
                             alt={meal.name}
-                            className="w-12 h-12 rounded object-cover mr-3"
+                            className="w-16 h-16 rounded-lg object-cover mr-4 border border-gray-200"
                           />
-                          <div className="text-lg font-semibold text-text">{meal.name}</div>
+                          <div className="text-base font-bold text-gray-900 font-meal">{meal.name}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-600 font-vendor">
                         {meal.vendor}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-700 font-medium">
                         {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C | {meal.fats}g F
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
                         {confirmDeleteId === meal.id ? (
                           <div className="flex items-center justify-end gap-3">
-                            <span className="text-gray-600 text-sm">Are you sure?</span>
+                            <span className="text-gray-600 text-sm font-semibold">Delete this meal?</span>
                             <button
                               onClick={() => handleDelete(meal.id)}
-                              className="text-red-600 hover:text-red-800 font-medium"
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                             >
-                              Yes, delete
+                              Delete
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="text-gray-500 hover:text-gray-700 font-medium"
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                             >
                               Cancel
                             </button>
                           </div>
                         ) : (
-                          <>
+                          <div className="flex items-center justify-end gap-3">
                             <button
                               onClick={() => handleEdit(meal)}
-                              className="text-secondary hover:text-secondary/80 mr-4"
+                              className="px-4 py-2 bg-blue-100 text-primary rounded-lg hover:bg-blue-200 transition-colors font-semibold"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(meal.id)}
-                              className="text-red-600 hover:text-red-800"
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={20} />
                             </button>
-                          </>
+                          </div>
                         )}
                       </td>
                     </tr>

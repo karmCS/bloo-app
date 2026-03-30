@@ -9,42 +9,50 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer group"
+      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer group border border-gray-100"
     >
-      <div className="aspect-[4/3] overflow-hidden">
+      <div className="aspect-[4/3] overflow-hidden bg-gray-100">
         <img
           src={meal.image_url}
           alt={meal.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
         />
       </div>
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-text mb-1 font-meal">{meal.name}</h3>
-        <p className="text-sm text-slate-500 mb-3 font-vendor">{meal.vendor}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="text-center">
-            <div className="text-xs uppercase tracking-widest text-gray-500 mb-0.5">Cal</div>
-            <div className="font-bold text-base text-text">{meal.calories}</div>
+      <div className="p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2 font-meal group-hover:text-primary transition-colors duration-300">
+          {meal.name}
+        </h3>
+        <p className="text-base text-gray-600 mb-6 font-vendor tracking-wide">
+          {meal.vendor}
+        </p>
+
+        <div className="flex justify-between items-center mb-5 pb-5 border-b border-gray-100">
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-primary">{meal.calories}</span>
+            <span className="text-sm text-gray-500 uppercase tracking-wider">cal</span>
           </div>
-          <div className="text-center">
-            <div className="text-xs uppercase tracking-widest text-gray-500 mb-0.5">Protein</div>
-            <div className="font-bold text-base text-text">{meal.protein}g</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs uppercase tracking-widest text-gray-500 mb-0.5">Carbs</div>
-            <div className="font-bold text-base text-text">{meal.carbs}g</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs uppercase tracking-widest text-gray-500 mb-0.5">Fats</div>
-            <div className="font-bold text-base text-text">{meal.fats}g</div>
+          <div className="flex gap-4 text-sm">
+            <div className="text-center">
+              <div className="font-semibold text-gray-900">{meal.protein}g</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider">protein</div>
+            </div>
+            <div className="text-center">
+              <div className="font-semibold text-gray-900">{meal.carbs}g</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider">carbs</div>
+            </div>
+            <div className="text-center">
+              <div className="font-semibold text-gray-900">{meal.fats}g</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider">fat</div>
+            </div>
           </div>
         </div>
+
         {meal.dietary_tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className="flex flex-wrap gap-2">
             {meal.dietary_tags.map((tag, index) => (
               <span
                 key={index}
-                className="inline-block px-2 py-0.5 bg-accent/10 text-accent text-xs font-medium rounded-full"
+                className="inline-block px-3 py-1 bg-blue-50 text-primary text-xs font-semibold rounded-full uppercase tracking-wide"
               >
                 {tag}
               </span>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase, Meal } from '../lib/supabase';
 import { useMeals } from '../hooks/useMeals';
 import Button from '../components/Button';
+import ImageUpload from '../components/ImageUpload';
 import { Trash2, Plus, LogOut, UtensilsCrossed } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +12,8 @@ export default function AdminPanel() {
   const [showForm, setShowForm] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     vendor: '',
@@ -28,23 +31,55 @@ export default function AdminPanel() {
     navigate('/');
   };
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = fileName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('meal-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from('meal-images').getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const mealData = {
-      name: formData.name,
-      vendor: formData.vendor,
-      image_url: formData.image_url,
-      calories: parseInt(formData.calories) || 0,
-      protein: parseInt(formData.protein) || 0,
-      carbs: parseInt(formData.carbs) || 0,
-      fats: parseInt(formData.fats) || 0,
-      ingredients: formData.ingredients.split(',').map((i) => i.trim()),
-      dietary_tags: formData.dietary_tags
-        ? formData.dietary_tags.split(',').map((t) => t.trim())
-        : [],
-    };
+    setIsUploading(true);
 
     try {
+      let imageUrl = formData.image_url;
+
+      if (uploadedFile) {
+        imageUrl = await uploadImage(uploadedFile);
+      }
+
+      if (!imageUrl) {
+        alert('Please upload an image');
+        setIsUploading(false);
+        return;
+      }
+
+      const mealData = {
+        name: formData.name,
+        vendor: formData.vendor,
+        image_url: imageUrl,
+        calories: parseInt(formData.calories) || 0,
+        protein: parseInt(formData.protein) || 0,
+        carbs: parseInt(formData.carbs) || 0,
+        fats: parseInt(formData.fats) || 0,
+        ingredients: formData.ingredients.split(',').map((i) => i.trim()),
+        dietary_tags: formData.dietary_tags
+          ? formData.dietary_tags.split(',').map((t) => t.trim())
+          : [],
+      };
+
       if (editingMeal) {
         const { error } = await supabase
           .from('meals')
@@ -60,6 +95,8 @@ export default function AdminPanel() {
     } catch (error) {
       console.error('Error saving meal:', error);
       alert('Failed to save meal. Please try again.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -103,8 +140,18 @@ export default function AdminPanel() {
       ingredients: '',
       dietary_tags: '',
     });
+    setUploadedFile(null);
     setEditingMeal(null);
     setShowForm(false);
+  };
+
+  const handleImageSelect = (file: File) => {
+    setUploadedFile(file);
+  };
+
+  const handleImageRemove = () => {
+    setUploadedFile(null);
+    setFormData({ ...formData, image_url: '' });
   };
 
   return (
@@ -179,28 +226,14 @@ export default function AdminPanel() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Image URL
+                  Meal Image
                 </label>
-                <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                  placeholder="https://images.pexels.com/..."
+                <ImageUpload
+                  onImageSelect={handleImageSelect}
+                  currentImageUrl={formData.image_url}
+                  onImageRemove={handleImageRemove}
+                  disabled={isUploading}
                 />
-                {formData.image_url && (
-                  <div className="mt-3">
-                    <img
-                      src={formData.image_url}
-                      alt="Preview"
-                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
               </div>
 
               <div>
@@ -253,10 +286,10 @@ export default function AdminPanel() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button type="submit" className="px-8 py-3">
-                  {editingMeal ? 'Update Meal' : 'Add Meal'}
+                <Button type="submit" className="px-8 py-3" disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : editingMeal ? 'Update Meal' : 'Add Meal'}
                 </Button>
-                <Button type="button" variant="secondary" onClick={resetForm} className="px-8 py-3">
+                <Button type="button" variant="secondary" onClick={resetForm} className="px-8 py-3" disabled={isUploading}>
                   Cancel
                 </Button>
               </div>

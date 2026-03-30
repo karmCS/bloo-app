@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase, Meal } from '../lib/supabase';
+import { useMeals } from '../hooks/useMeals';
 import Button from '../components/Button';
 import { Trash2, Plus, LogOut, UtensilsCrossed } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const { meals, refetch } = useMeals();
   const [showForm, setShowForm] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     vendor: '',
@@ -18,26 +20,8 @@ export default function AdminPanel() {
     carbs: '',
     fats: '',
     ingredients: '',
-    week_id: '',
     dietary_tags: '',
   });
-
-  useEffect(() => {
-    fetchMeals();
-  }, []);
-
-  const fetchMeals = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('meals')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setMeals(data || []);
-    } catch (error) {
-      console.error('Error fetching meals:', error);
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -55,7 +39,6 @@ export default function AdminPanel() {
       carbs: parseInt(formData.carbs) || 0,
       fats: parseInt(formData.fats) || 0,
       ingredients: formData.ingredients.split(',').map((i) => i.trim()),
-      week_id: formData.week_id,
       dietary_tags: formData.dietary_tags
         ? formData.dietary_tags.split(',').map((t) => t.trim())
         : [],
@@ -73,7 +56,7 @@ export default function AdminPanel() {
         if (error) throw error;
       }
       resetForm();
-      fetchMeals();
+      refetch();
     } catch (error) {
       console.error('Error saving meal:', error);
       alert('Failed to save meal. Please try again.');
@@ -91,18 +74,17 @@ export default function AdminPanel() {
       carbs: meal.carbs.toString(),
       fats: meal.fats.toString(),
       ingredients: meal.ingredients.join(', '),
-      week_id: meal.week_id,
       dietary_tags: meal.dietary_tags.join(', '),
     });
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this meal?')) return;
     try {
       const { error } = await supabase.from('meals').delete().eq('id', id);
       if (error) throw error;
-      fetchMeals();
+      setConfirmDeleteId(null);
+      refetch();
     } catch (error) {
       console.error('Error deleting meal:', error);
       alert('Failed to delete meal. Please try again.');
@@ -119,7 +101,6 @@ export default function AdminPanel() {
       carbs: '',
       fats: '',
       ingredients: '',
-      week_id: '',
       dietary_tags: '',
     });
     setEditingMeal(null);
@@ -231,31 +212,17 @@ export default function AdminPanel() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                    Week ID (e.g., 2024-W12)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.week_id}
-                    onChange={(e) => setFormData({ ...formData, week_id: e.target.value })}
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
-                    Dietary Tags (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.dietary_tags}
-                    onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
-                    placeholder="vegan, keto, gluten-free"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-gray-500 mb-2">
+                  Dietary Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={formData.dietary_tags}
+                  onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
+                  placeholder="vegan, keto, gluten-free"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
               </div>
 
               <div className="flex gap-3">
@@ -280,7 +247,7 @@ export default function AdminPanel() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    {['Meal', 'Vendor', 'Week', 'Macros', 'Actions'].map((h) => (
+                    {['Meal', 'Vendor', 'Macros', 'Actions'].map((h) => (
                       <th
                         key={h}
                         className={`px-6 py-3 text-xs font-medium uppercase tracking-widest text-gray-500 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
@@ -307,24 +274,41 @@ export default function AdminPanel() {
                         {meal.vendor}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {meal.week_id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C | {meal.fats}g F
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(meal)}
-                          className="text-secondary hover:text-secondary/80 mr-4"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(meal.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {confirmDeleteId === meal.id ? (
+                          <div className="flex items-center justify-end gap-3">
+                            <span className="text-gray-600 text-sm">Are you sure?</span>
+                            <button
+                              onClick={() => handleDelete(meal.id)}
+                              className="text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Yes, delete
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-gray-500 hover:text-gray-700 font-medium"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEdit(meal)}
+                              className="text-secondary hover:text-secondary/80 mr-4"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(meal.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}

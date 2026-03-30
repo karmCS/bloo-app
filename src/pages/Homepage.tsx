@@ -1,35 +1,15 @@
-import { useState, useEffect } from 'react';
-import { supabase, Meal } from '../lib/supabase';
+import { useState } from 'react';
+import { Meal } from '../lib/supabase';
+import { useMeals } from '../hooks/useMeals';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
 import { UtensilsCrossed } from 'lucide-react';
 
 export default function Homepage() {
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const { meals, loading } = useMeals();
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMeals();
-  }, []);
-
-  const fetchMeals = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('meals')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setMeals(data || []);
-    } catch (error) {
-      console.error('Error fetching meals:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleMealClick = (meal: Meal) => {
     setSelectedMeal(meal);

@@ -30,7 +30,6 @@ export interface Meal {
   carbs: number;
   fats: number;
   ingredients: string[];
-  week_id: string;
   dietary_tags: string[];
   created_at: string;
   updated_at: string;

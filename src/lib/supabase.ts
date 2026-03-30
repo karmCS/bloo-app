@@ -1,3 +1,11 @@
+// Environment variable validation
+if (!import.meta.env.VITE_SUPABASE_URL) {
+    throw new Error('Missing VITE_SUPABASE_URL - check your .env file');
+}
+if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    throw new Error('Missing VITE_SUPABASE_ANON_KEY - check your .env file');
+}
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

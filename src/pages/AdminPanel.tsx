@@ -67,7 +67,7 @@ export default function AdminPanel() {
         return;
       }
 
-      const mealData = {
+      const baseMealData = {
         name: formData.name,
         vendor: formData.vendor,
         description: formData.description || null,
@@ -82,21 +82,43 @@ export default function AdminPanel() {
           : [],
       };
 
+      console.log('Base meal data:', baseMealData);
+      console.log('Editing meal?', !!editingMeal, editingMeal?.id);
+
       if (editingMeal) {
-        const { error } = await supabase
+        const updateData = {
+          ...baseMealData,
+          updated_at: new Date().toISOString(),
+        };
+        console.log('Update data being sent to Supabase:', updateData);
+
+        const { data, error } = await supabase
           .from('meals')
-          .update(mealData)
-          .eq('id', editingMeal.id);
+          .update(updateData)
+          .eq('id', editingMeal.id)
+          .select();
+
+        console.log('Update response:', { data, error });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('meals').insert([mealData]);
+        const insertData = {
+          ...baseMealData,
+          week_id: '2026-W13',
+        };
+        console.log('Insert data being sent to Supabase:', insertData);
+
+        const { data, error } = await supabase.from('meals').insert([insertData]).select();
+        console.log('Insert response:', { data, error });
         if (error) throw error;
       }
       resetForm();
       refetch();
     } catch (error) {
-      console.error('Error saving meal:', error);
-      alert('Failed to save meal. Please try again.');
+      console.error('Error saving meal - Full error object:', error);
+      console.error('Error message:', (error as any)?.message);
+      console.error('Error details:', (error as any)?.details);
+      console.error('Error hint:', (error as any)?.hint);
+      alert(`Failed to save meal: ${(error as any)?.message || 'Please try again.'}`);
     } finally {
       setIsUploading(false);
     }

@@ -101,13 +101,9 @@ export default function AdminPanel() {
         console.log('Update response:', { data, error });
         if (error) throw error;
       } else {
-        const insertData = {
-          ...baseMealData,
-          week_id: '2026-W13',
-        };
-        console.log('Insert data being sent to Supabase:', insertData);
+        console.log('Insert data being sent to Supabase:', baseMealData);
 
-        const { data, error } = await supabase.from('meals').insert([insertData]).select();
+        const { data, error } = await supabase.from('meals').insert([baseMealData]).select();
         console.log('Insert response:', { data, error });
         if (error) throw error;
       }

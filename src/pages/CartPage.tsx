@@ -109,10 +109,10 @@ export default function CartPage() {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-gray-900">
-                            ${(item.meal.price * item.quantity).toFixed(2)}
+                            ${((item.meal.price ?? 0) * item.quantity).toFixed(2)}
                           </div>
                           <div className="text-sm text-gray-500">
-                            ${item.meal.price.toFixed(2)} each
+                            ${(item.meal.price ?? 0).toFixed(2)} each
                           </div>
                         </div>
                       </div>

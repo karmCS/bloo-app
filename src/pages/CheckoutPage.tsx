@@ -181,7 +181,7 @@ export default function CheckoutPage() {
                       <div className="text-gray-500">Qty: {item.quantity}</div>
                     </div>
                     <div className="font-semibold text-gray-900">
-                      ${(item.meal.price * item.quantity).toFixed(2)}
+                      ${((item.meal.price ?? 0) * item.quantity).toFixed(2)}
                     </div>
                   </div>
                 ))}

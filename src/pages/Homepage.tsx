@@ -4,11 +4,13 @@ import { useMeals } from '../hooks/useMeals';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
-import { UtensilsCrossed, ChevronDown } from 'lucide-react';
+import { UtensilsCrossed, ChevronDown, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../contexts/CartContext';
 
 export default function Homepage() {
   const { meals, loading } = useMeals();
+  const { totalItems } = useCart();
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -33,12 +35,28 @@ export default function Homepage() {
               <UtensilsCrossed className="text-primary" size={28} />
               <h1 className="text-3xl font-bold text-primary font-brand tracking-wide">bloo</h1>
             </div>
-            <Link
-              to="/login"
-              className="text-sm text-gray-600 hover:text-primary transition-colors"
-            >
-              Admin
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                to="/cart"
+                className="relative group"
+              >
+                <ShoppingCart
+                  className="text-gray-600 group-hover:text-primary transition-colors"
+                  size={24}
+                />
+                {totalItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+              <Link
+                to="/login"
+                className="text-sm text-gray-600 hover:text-primary transition-colors"
+              >
+                Admin
+              </Link>
+            </div>
           </div>
         </div>
       </header>

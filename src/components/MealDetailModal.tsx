@@ -1,5 +1,7 @@
 import { Meal } from '../lib/supabase';
-import { X, Flame, Fish, Wheat, Droplet } from 'lucide-react';
+import { X, Flame, Fish, Wheat, Droplet, ShoppingCart } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
+import { useState } from 'react';
 
 interface MealDetailModalProps {
   meal: Meal | null;
@@ -8,7 +10,21 @@ interface MealDetailModalProps {
 }
 
 export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailModalProps) {
+  const { addToCart } = useCart();
+  const [adding, setAdding] = useState(false);
+
   if (!meal || !isOpen) return null;
+
+  const handleAddToCart = async () => {
+    setAdding(true);
+    try {
+      await addToCart(meal);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    } finally {
+      setTimeout(() => setAdding(false), 600);
+    }
+  };
 
   return (
     <div
@@ -104,7 +120,7 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
                 </div>
               </div>
 
-              <div>
+              <div className="mb-10">
                 <h3 className="text-2xl font-bold text-gray-900 mb-6 font-meal">
                   Ingredients
                 </h3>
@@ -118,6 +134,35 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
                     </li>
                   ))}
                 </ul>
+              </div>
+
+              {meal.description && (
+                <div className="mb-10 p-6 bg-blue-50 rounded-xl border border-blue-100">
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 font-meal">
+                    What Makes This Special
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {meal.description}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-6 pt-6 border-t border-gray-200">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-gray-900">${meal.price.toFixed(2)}</span>
+                </div>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={adding}
+                  className={`flex items-center gap-3 px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 ${
+                    adding
+                      ? 'bg-green-500 text-white'
+                      : 'bg-primary text-white hover:bg-blue-700 hover:shadow-lg'
+                  }`}
+                >
+                  <ShoppingCart size={22} />
+                  {adding ? 'Added to Cart!' : 'Add to Cart'}
+                </button>
               </div>
             </div>
           </div>

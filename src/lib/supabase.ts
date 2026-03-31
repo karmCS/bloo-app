@@ -26,12 +26,40 @@ export interface Meal {
   vendor: string;
   description?: string | null;
   image_url: string;
+  price: number;
   calories: number;
   protein: number;
   carbs: number;
   fats: number;
   ingredients: string[];
   dietary_tags: string[];
+  week_id: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface CartItem {
+  id: string;
+  session_id: string;
+  meal_id: string;
+  quantity: number;
+  created_at: string;
+}
+
+export interface Order {
+  id: string;
+  user_email: string;
+  items: OrderItem[];
+  total_price: number;
+  payment_method: 'zelle' | 'venmo';
+  status: 'pending' | 'confirmed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderItem {
+  meal_id: string;
+  meal_name: string;
+  price: number;
+  quantity: number;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { UtensilsCrossed, ArrowLeft, CreditCard } from 'lucide-react';
@@ -9,6 +9,12 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'venmo'>('zelle');
+
+  useEffect(() => {
+    if (items.length === 0) {
+      navigate('/cart');
+    }
+  }, [items.length, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +30,6 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0) {
-    navigate('/cart');
     return null;
   }
 

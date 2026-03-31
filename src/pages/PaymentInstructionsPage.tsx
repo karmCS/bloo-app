@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { UtensilsCrossed, CheckCircle, Copy, Check } from 'lucide-react';
 import Button from '../components/Button';
+import { supabase, OrderItem } from '../lib/supabase';
+import { useCart } from '../contexts/CartContext';
 
 const PAYMENT_INFO = {
   zelle: {
@@ -17,14 +19,63 @@ const PAYMENT_INFO = {
 export default function PaymentInstructionsPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { clearCart } = useCart();
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { orderId, email, paymentMethod, totalPrice } = location.state || {};
+  const { email, paymentMethod, totalPrice, items } = location.state || {};
 
-  if (!orderId) {
-    navigate('/');
-    return null;
+  useEffect(() => {
+    if (!email || !paymentMethod || !totalPrice || !items) {
+      navigate('/cart');
+      return;
+    }
+
+    const createOrder = async () => {
+      try {
+        const orderItems: OrderItem[] = items.map((item: any) => ({
+          meal_id: item.meal.id,
+          meal_name: item.meal.name,
+          price: item.meal.price,
+          quantity: item.quantity,
+        }));
+
+        const { data, error } = await supabase
+          .from('orders')
+          .insert([
+            {
+              user_email: email,
+              items: orderItems,
+              total_price: totalPrice,
+              payment_method: paymentMethod,
+              status: 'pending',
+            },
+          ])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setOrderId(data.id);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error creating order:', error);
+        alert('Failed to create order. Please try again.');
+        navigate('/checkout');
+      }
+    };
+
+    createOrder();
+  }, [email, paymentMethod, totalPrice, items, navigate]);
+
+  if (loading || !orderId) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   const paymentInfo = PAYMENT_INFO[paymentMethod as 'zelle' | 'venmo'];
@@ -58,6 +109,8 @@ export default function PaymentInstructionsPage() {
       if (!response.ok) {
         console.error('Failed to send emails:', await response.text());
       }
+
+      await clearCart();
     } catch (error) {
       console.error('Error sending emails:', error);
     }

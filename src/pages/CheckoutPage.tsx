@@ -3,59 +3,24 @@ import { useCart } from '../contexts/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { UtensilsCrossed, ArrowLeft, CreditCard } from 'lucide-react';
 import Button from '../components/Button';
-import { supabase, OrderItem } from '../lib/supabase';
 
 export default function CheckoutPage() {
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice } = useCart();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'venmo'>('zelle');
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
-    try {
-      const orderItems: OrderItem[] = items.map((item) => ({
-        meal_id: item.meal.id,
-        meal_name: item.meal.name,
-        price: item.meal.price,
-        quantity: item.quantity,
-      }));
-
-      const { data, error } = await supabase
-        .from('orders')
-        .insert([
-          {
-            user_email: email,
-            items: orderItems,
-            total_price: totalPrice,
-            payment_method: paymentMethod,
-            status: 'pending',
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await clearCart();
-
-      navigate('/payment-instructions', {
-        state: {
-          orderId: data.id,
-          email,
-          paymentMethod,
-          totalPrice,
-        },
-      });
-    } catch (error) {
-      console.error('Error creating order:', error);
-      alert('Failed to create order. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    navigate('/payment-instructions', {
+      state: {
+        email,
+        paymentMethod,
+        totalPrice,
+        items,
+      },
+    });
   };
 
   if (items.length === 0) {
@@ -159,10 +124,9 @@ export default function CheckoutPage() {
 
               <Button
                 type="submit"
-                disabled={loading}
                 className="w-full py-4 text-lg"
               >
-                {loading ? 'Processing...' : 'Confirm Purchase'}
+                Continue to Payment
               </Button>
             </form>
           </div>

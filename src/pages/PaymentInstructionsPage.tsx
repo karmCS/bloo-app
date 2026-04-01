@@ -4,6 +4,7 @@ import { UtensilsCrossed, CheckCircle, Copy, Check } from 'lucide-react';
 import Button from '../components/Button';
 import { supabase, OrderItem } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
+import { sendOrderEmails } from '../services/emailService';
 
 const PAYMENT_INFO = {
   zelle: {
@@ -24,6 +25,8 @@ export default function PaymentInstructionsPage() {
   const [confirmed, setConfirmed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const { email, paymentMethod, totalPrice, items } = location.state || {};
 
@@ -87,6 +90,9 @@ export default function PaymentInstructionsPage() {
   };
 
   const handleConfirm = async () => {
+    setSendingEmails(true);
+    setEmailError(null);
+
     try {
       const orderItems = items.map((item: any) => ({
         meal_name: item.meal.name,
@@ -94,43 +100,25 @@ export default function PaymentInstructionsPage() {
         quantity: item.quantity,
       }));
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-emails`;
-      console.log('[checkout] Calling send-order-emails for order:', orderId);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orderId,
-          email,
-          paymentMethod,
-          totalPrice,
-          items: orderItems,
-        }),
+      await sendOrderEmails({
+        orderId,
+        email,
+        paymentMethod,
+        totalPrice,
+        items: orderItems,
       });
 
-      const responseBody = await response.json();
-
-      if (!response.ok) {
-        console.error('[checkout] send-order-emails failed:', response.status, responseBody);
-        throw new Error(responseBody.error || 'Failed to send confirmation emails');
-      }
-
-      console.log('[checkout] Emails sent successfully:', responseBody);
+      setConfirmed(true);
       await clearCart();
-      setConfirmed(true);
-    } catch (error) {
-      console.error('[checkout] Error during payment confirmation:', error);
-      alert(`There was an issue sending confirmation emails: ${error instanceof Error ? error.message : 'Unknown error'}. Your order is still placed.`);
-      setConfirmed(true);
-    }
 
-    setTimeout(() => {
-      navigate('/');
-    }, 3000);
+      setTimeout(() => {
+        navigate('/');
+      }, 3000);
+    } catch (error) {
+      console.error('Error sending emails:', error);
+      setEmailError(error instanceof Error ? error.message : 'Failed to send confirmation emails');
+      setSendingEmails(false);
+    }
   };
 
   return (
@@ -213,11 +201,30 @@ export default function PaymentInstructionsPage() {
               </p>
             </div>
 
+            {emailError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-red-800">
+                  <strong>Error:</strong> {emailError}
+                </p>
+                <p className="text-xs text-red-600 mt-1">
+                  Please try again or contact support if the issue persists.
+                </p>
+              </div>
+            )}
+
             <Button
               onClick={handleConfirm}
+              disabled={sendingEmails}
               className="w-full py-4 text-lg"
             >
-              I've Completed Payment
+              {sendingEmails ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  Sending Confirmation...
+                </span>
+              ) : (
+                "I've Completed Payment"
+              )}
             </Button>
 
             <p className="text-center text-sm text-gray-500 mt-4">

@@ -32,9 +32,12 @@ Deno.serve(async (req: Request) => {
   try {
     const { orderId, email, paymentMethod, totalPrice, items } = await req.json();
 
-    if (!orderId || !email || !paymentMethod || !totalPrice) {
+    console.log("Received request:", { orderId, email, paymentMethod, totalPrice, itemCount: items?.length });
+
+    if (!orderId || !email || !paymentMethod || totalPrice == null) {
+      console.error("Missing required fields:", { orderId: !!orderId, email: !!email, paymentMethod: !!paymentMethod, totalPrice });
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields", received: { orderId: !!orderId, email: !!email, paymentMethod: !!paymentMethod, totalPrice } }),
         {
           status: 400,
           headers: {
@@ -46,9 +49,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY is not configured");
+      console.error("RESEND_API_KEY is not configured — set it via: supabase secrets set RESEND_API_KEY=re_...");
       return new Response(
-        JSON.stringify({ error: "Email service not configured" }),
+        JSON.stringify({ error: "Email service not configured: RESEND_API_KEY missing" }),
         {
           status: 500,
           headers: {
@@ -137,25 +140,25 @@ Deno.serve(async (req: Request) => {
       </div>
     `;
 
-    await resend.emails.send({
+    console.log("Sending customer email to:", email);
+    const customerResult = await resend.emails.send({
       from: 'Bloo <orders@bloo.com>',
       to: email,
       subject: 'Order Confirmation - Bloo',
       html: customerEmailHtml,
     });
+    console.log("Customer email result:", JSON.stringify(customerResult));
 
-    await resend.emails.send({
+    console.log("Sending admin email to:", ADMIN_EMAIL);
+    const adminResult = await resend.emails.send({
       from: 'Bloo Orders <orders@bloo.com>',
       to: ADMIN_EMAIL,
       subject: `New Order Received - #${orderShortId}`,
       html: adminEmailHtml,
     });
+    console.log("Admin email result:", JSON.stringify(adminResult));
 
-    console.log("Order emails sent successfully:");
-    console.log("Customer Email:", email);
-    console.log("Admin Email:", ADMIN_EMAIL);
-    console.log("Order ID:", orderShortId);
-    console.log("Total:", totalPrice);
+    console.log("Order emails sent successfully — orderId:", orderShortId, "total:", totalPrice);
 
     return new Response(
       JSON.stringify({

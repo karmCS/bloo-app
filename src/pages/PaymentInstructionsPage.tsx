@@ -87,8 +87,6 @@ export default function PaymentInstructionsPage() {
   };
 
   const handleConfirm = async () => {
-    setConfirmed(true);
-
     try {
       const orderItems = items.map((item: any) => ({
         meal_name: item.meal.name,
@@ -97,6 +95,7 @@ export default function PaymentInstructionsPage() {
       }));
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-emails`;
+      console.log('[checkout] Calling send-order-emails for order:', orderId);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -113,18 +112,20 @@ export default function PaymentInstructionsPage() {
         }),
       });
 
+      const responseBody = await response.json();
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to send emails:', errorText);
-        throw new Error('Failed to send confirmation emails');
+        console.error('[checkout] send-order-emails failed:', response.status, responseBody);
+        throw new Error(responseBody.error || 'Failed to send confirmation emails');
       }
 
-      const result = await response.json();
-      console.log('Emails sent successfully:', result);
-
+      console.log('[checkout] Emails sent successfully:', responseBody);
       await clearCart();
+      setConfirmed(true);
     } catch (error) {
-      console.error('Error sending emails:', error);
+      console.error('[checkout] Error during payment confirmation:', error);
+      alert(`There was an issue sending confirmation emails: ${error instanceof Error ? error.message : 'Unknown error'}. Your order is still placed.`);
+      setConfirmed(true);
     }
 
     setTimeout(() => {

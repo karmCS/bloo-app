@@ -5,16 +5,16 @@ import { UtensilsCrossed, ArrowLeft, CreditCard } from 'lucide-react';
 import Button from '../components/Button';
 
 export default function CheckoutPage() {
-  const { items, totalPrice } = useCart();
+  const { items, totalPrice, loading } = useCart();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'venmo'>('zelle');
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (!loading && items.length === 0) {
       navigate('/cart');
     }
-  }, [items.length, navigate]);
+  }, [loading, items.length, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +28,14 @@ export default function CheckoutPage() {
       },
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return null;

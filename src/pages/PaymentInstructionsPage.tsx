@@ -28,7 +28,7 @@ export default function PaymentInstructionsPage() {
   const { email, paymentMethod, totalPrice, items } = location.state || {};
 
   useEffect(() => {
-    if (!email || !paymentMethod || !totalPrice || !items) {
+    if (!email || !paymentMethod || totalPrice == null || !items) {
       navigate('/cart');
       return;
     }

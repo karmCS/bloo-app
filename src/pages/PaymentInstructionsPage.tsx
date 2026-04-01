@@ -90,6 +90,12 @@ export default function PaymentInstructionsPage() {
     setConfirmed(true);
 
     try {
+      const orderItems = items.map((item: any) => ({
+        meal_name: item.meal.name,
+        price: item.meal.price,
+        quantity: item.quantity,
+      }));
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-emails`;
 
       const response = await fetch(apiUrl, {
@@ -103,12 +109,18 @@ export default function PaymentInstructionsPage() {
           email,
           paymentMethod,
           totalPrice,
+          items: orderItems,
         }),
       });
 
       if (!response.ok) {
-        console.error('Failed to send emails:', await response.text());
+        const errorText = await response.text();
+        console.error('Failed to send emails:', errorText);
+        throw new Error('Failed to send confirmation emails');
       }
+
+      const result = await response.json();
+      console.log('Emails sent successfully:', result);
 
       await clearCart();
     } catch (error) {

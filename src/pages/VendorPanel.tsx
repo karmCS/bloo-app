@@ -275,7 +275,7 @@ export default function VendorPanel() {
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Manage Meals</h2>
+            <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Manage Meals</h2>
             <p className="text-gray-600">Create and manage your menu</p>
           </div>
           <Button
@@ -290,7 +290,7 @@ export default function VendorPanel() {
         {/* ── Meal form ──────────────────────────────────────────────────── */}
         {showForm && (
           <div className="bg-white rounded-2xl shadow-xl p-8 mb-10 border border-gray-100">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 font-meal">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 font-sans">
               {editingMeal ? 'Edit Meal' : 'Add New Meal'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-6">

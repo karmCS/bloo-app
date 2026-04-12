@@ -519,7 +519,7 @@ export default function AdminPanel() {
           <>
             <div className="mb-8 flex justify-between items-center">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Manage Meals</h2>
+                <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Manage Meals</h2>
                 <p className="text-gray-600">Create and manage your weekly menu</p>
               </div>
               <Button
@@ -533,7 +533,7 @@ export default function AdminPanel() {
 
             {showForm && (
               <div className="bg-white rounded-2xl shadow-xl p-8 mb-10 border border-gray-100">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 font-meal">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6 font-sans">
                   {editingMeal ? 'Edit Meal' : 'Add New Meal'}
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -693,7 +693,7 @@ export default function AdminPanel() {
                   <button
                     type="button"
                     onClick={() => setMealsVendorFilterId(null)}
-                    className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-vendor font-medium transition-colors ${
+                    className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-sans font-medium transition-colors ${
                       mealsVendorFilterId === null
                         ? 'bg-primary text-white shadow-sm'
                         : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
@@ -708,7 +708,7 @@ export default function AdminPanel() {
                         key={v.id}
                         type="button"
                         onClick={() => setMealsVendorFilterId(v.id)}
-                        className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-vendor font-medium transition-colors whitespace-nowrap ${
+                        className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-sans font-medium transition-colors whitespace-nowrap ${
                           active
                             ? 'bg-primary text-white shadow-sm'
                             : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
@@ -730,7 +730,7 @@ export default function AdminPanel() {
                 </div>
               ) : filteredMeals.length === 0 ? (
                 <div className="p-16 text-center">
-                  <p className="text-gray-500 text-lg font-vendor">No meals for this vendor. Choose another filter or add a meal.</p>
+                  <p className="text-gray-500 text-lg font-sans">No meals for this vendor. Choose another filter or add a meal.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -760,7 +760,7 @@ export default function AdminPanel() {
                               <div className="text-base font-bold text-gray-900 font-meal">{meal.name}</div>
                             </div>
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-600 font-vendor">
+                          <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-600 font-sans">
                             {meal.vendor}
                           </td>
                           <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-900 font-semibold">
@@ -823,7 +823,7 @@ export default function AdminPanel() {
             <section>
               <div className="mb-6 flex justify-between items-center">
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Super admins</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Super admins</h2>
                   <p className="text-gray-600">
                     Full access to this platform. Each admin must use their own Clerk account — do not share one login.
                   </p>
@@ -961,7 +961,7 @@ export default function AdminPanel() {
             <section>
               <div className="mb-6 flex justify-between items-center">
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Vendors</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Vendors</h2>
                   <p className="text-gray-600">
                     Partner businesses on the platform. Open a row to manage the business and each vendor&apos;s separate sign-in accounts.
                   </p>

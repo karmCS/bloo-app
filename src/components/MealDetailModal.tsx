@@ -32,43 +32,42 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
       onClick={onClose}
     >
       <div className="min-h-screen relative">
-        <div className="fixed inset-0">
-          <img
-            src={meal.image_url}
-            alt={meal.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-        </div>
+        <div className="fixed inset-0 bg-dark-bg-1/95 backdrop-blur-md"></div>
 
         <button
           onClick={onClose}
-          className="fixed top-6 right-6 z-20 p-3 bg-white/10 backdrop-blur-md text-white rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
+          className="fixed top-6 right-6 z-20 p-2.5 bg-dark-form text-dark-text hover:text-white rounded-xl border border-dark-border/60 hover:bg-dark-border/60 transition-all duration-200"
         >
-          <X size={24} />
+          <X size={20} />
         </button>
 
         <div
           className="relative z-10 flex items-center justify-center min-h-screen p-6"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="max-w-4xl w-full bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden animate-slideUp">
-            <div className="p-8 md:p-12">
-              <div className="mb-8">
-                <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3 font-meal leading-tight">
+          <div className="max-w-3xl w-full bg-dark-bg-2 rounded-2xl shadow-2xl border border-dark-border/60 overflow-hidden animate-slideUp">
+            <div className="relative h-56 overflow-hidden">
+              <img
+                src={meal.image_url}
+                alt={meal.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-dark-bg-2 via-dark-bg-2/40 to-transparent"></div>
+              <div className="absolute bottom-6 left-8 right-8">
+                <h2 className="text-3xl font-bold text-white mb-1 font-meal leading-tight">
                   {meal.name}
                 </h2>
-                <p className="text-xl text-gray-600 font-vendor tracking-wide">
-                  by {meal.vendor}
-                </p>
+                <p className="text-dark-text text-sm font-vendor">by {meal.vendor}</p>
               </div>
+            </div>
 
+            <div className="p-8">
               {meal.dietary_tags.length > 0 && (
-                <div className="flex flex-wrap gap-3 mb-10">
+                <div className="flex flex-wrap gap-2 mb-6">
                   {meal.dietary_tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="inline-block px-4 py-2 bg-blue-50 text-primary text-sm font-semibold rounded-full uppercase tracking-wide border border-blue-100"
+                      className="px-3 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20 uppercase tracking-wide"
                     >
                       {tag}
                     </span>
@@ -76,91 +75,61 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
                 </div>
               )}
 
-              <div className="mb-10">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 font-meal">
-                  Nutrition Facts
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-6 text-center border border-blue-100">
-                    <Flame className="mx-auto mb-3 text-primary" size={28} />
-                    <div className="text-3xl font-bold text-gray-900 mb-1">
-                      {meal.calories}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-dark-text uppercase tracking-wider mb-4">Nutrition Facts</h3>
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { icon: Flame, label: 'Calories', value: meal.calories, unit: '' },
+                    { icon: Fish, label: 'Protein', value: meal.protein, unit: 'g' },
+                    { icon: Wheat, label: 'Carbs', value: meal.carbs, unit: 'g' },
+                    { icon: Droplet, label: 'Fats', value: meal.fats, unit: 'g' },
+                  ].map(({ icon: Icon, label, value, unit }) => (
+                    <div key={label} className="bg-dark-form rounded-xl p-4 text-center border border-dark-border/40">
+                      <Icon className="mx-auto mb-2 text-primary" size={20} />
+                      <div className="text-xl font-bold text-white mb-0.5">
+                        {value}{unit}
+                      </div>
+                      <div className="text-dark-text-muted text-[10px] uppercase tracking-wider font-semibold">
+                        {label}
+                      </div>
                     </div>
-                    <div className="text-xs uppercase tracking-wider text-gray-600 font-semibold">
-                      Calories
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-6 text-center border border-blue-100">
-                    <Fish className="mx-auto mb-3 text-primary" size={28} />
-                    <div className="text-3xl font-bold text-gray-900 mb-1">
-                      {meal.protein}g
-                    </div>
-                    <div className="text-xs uppercase tracking-wider text-gray-600 font-semibold">
-                      Protein
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-6 text-center border border-blue-100">
-                    <Wheat className="mx-auto mb-3 text-primary" size={28} />
-                    <div className="text-3xl font-bold text-gray-900 mb-1">
-                      {meal.carbs}g
-                    </div>
-                    <div className="text-xs uppercase tracking-wider text-gray-600 font-semibold">
-                      Carbs
-                    </div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-6 text-center border border-blue-100">
-                    <Droplet className="mx-auto mb-3 text-primary" size={28} />
-                    <div className="text-3xl font-bold text-gray-900 mb-1">
-                      {meal.fats}g
-                    </div>
-                    <div className="text-xs uppercase tracking-wider text-gray-600 font-semibold">
-                      Fats
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="mb-10">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 font-meal">
-                  Ingredients
-                </h3>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-dark-text uppercase tracking-wider mb-3">Ingredients</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {meal.ingredients.map((ingredient, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="inline-block w-2 h-2 rounded-full bg-primary mt-2 mr-3 flex-shrink-0"></span>
-                      <span className="text-base text-gray-700 leading-relaxed">
-                        {ingredient}
-                      </span>
-                    </li>
+                    <div key={index} className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
+                      <span className="text-sm text-dark-text leading-relaxed">{ingredient}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
 
               {meal.description && (
-                <div className="mb-10 p-6 bg-blue-50 rounded-xl border border-blue-100">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 font-meal">
-                    What Makes This Special
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    {meal.description}
-                  </p>
+                <div className="mb-6 p-4 bg-dark-form rounded-xl border border-dark-border/40">
+                  <h3 className="text-sm font-semibold text-dark-text uppercase tracking-wider mb-2">About This Meal</h3>
+                  <p className="text-dark-text text-sm leading-relaxed">{meal.description}</p>
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-6 pt-6 border-t border-gray-200">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-gray-900">${meal.price.toFixed(2)}</span>
+              <div className="flex items-center justify-between gap-6 pt-4 border-t border-dark-border/40">
+                <div>
+                  <span className="text-3xl font-bold text-white">${meal.price.toFixed(2)}</span>
                 </div>
                 <button
                   onClick={handleAddToCart}
                   disabled={adding}
-                  className={`flex items-center gap-3 px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 ${
+                  className={`flex items-center gap-3 px-8 py-3.5 rounded-xl font-semibold transition-all duration-300 ${
                     adding
-                      ? 'bg-green-500 text-white'
-                      : 'bg-primary text-white hover:bg-blue-700 hover:shadow-lg'
+                      ? 'bg-green-600/20 text-green-400 border border-green-600/30'
+                      : 'bg-primary hover:bg-primary-hover active:bg-primary-active text-white shadow-[0px_4px_12px_rgba(74,144,226,0.35)]'
                   }`}
                 >
-                  <ShoppingCart size={22} />
+                  <ShoppingCart size={20} />
                   {adding ? 'Added to Cart!' : 'Add to Cart'}
                 </button>
               </div>

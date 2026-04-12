@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { UtensilsCrossed, CheckCircle, Copy, Check } from 'lucide-react';
-import Button from '../components/Button';
+import { UtensilsCrossed, CheckCircle, Copy, Check, AlertCircle } from 'lucide-react';
 import { supabase, OrderItem } from '../lib/supabase';
 import { useCart } from '../contexts/CartContext';
 import { sendOrderEmails } from '../services/emailService';
@@ -75,8 +74,8 @@ export default function PaymentInstructionsPage() {
 
   if (loading || !orderId) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-dark-bg-1 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-2 border-dark-border border-t-primary"></div>
       </div>
     );
   }
@@ -122,144 +121,173 @@ export default function PaymentInstructionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-5">
+    <div className="min-h-screen bg-dark-bg-1 font-sans">
+      <header className="bg-dark-bg-2 border-b border-dark-border/40 px-6 py-4">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <UtensilsCrossed className="text-primary" size={28} />
-            <h1 className="text-3xl font-bold text-primary font-brand tracking-wide">bloo</h1>
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <UtensilsCrossed className="text-primary" size={18} />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white font-brand leading-none">bloo</h1>
+              <p className="text-dark-text-muted text-[10px]">Payment Instructions</p>
+            </div>
           </div>
+          {!confirmed && (
+            <Link to="/" className="text-sm text-dark-text hover:text-white transition-colors">
+              Return to Homepage
+            </Link>
+          )}
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
+      <main className="max-w-3xl mx-auto px-6 py-8">
         {!confirmed ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-10">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <CheckCircle className="text-green-600" size={32} />
+          <div className="space-y-4">
+            <div className="bg-dark-bg-2 rounded-xl border border-dark-border/40 p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="text-green-400" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white font-meal">Order Placed!</h2>
+                  <p className="text-dark-text-muted text-sm">Order #{orderId.slice(0, 8)}</p>
+                </div>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 font-meal mb-2">
-                Order Confirmed!
-              </h2>
-              <p className="text-gray-600">
-                Order #{orderId.slice(0, 8)}
-              </p>
+              <div className="h-px bg-dark-border/40 mb-4"></div>
+              <div className="space-y-2">
+                {items.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={item.meal.image_url}
+                        alt={item.meal.name}
+                        className="w-8 h-8 rounded-lg object-cover flex-shrink-0"
+                      />
+                      <span className="text-dark-text text-sm">{item.meal.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-dark-text-muted text-xs">x{item.quantity}</span>
+                      <span className="text-white text-sm font-semibold">
+                        ${(item.meal.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-3 border-t border-dark-border/40 mt-3">
+                  <span className="text-xs font-bold text-dark-text uppercase tracking-wider">Total</span>
+                  <span className="text-xl font-bold text-white">${totalPrice.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-blue-50 rounded-xl p-8 mb-8 border border-blue-100">
-              <h3 className="text-2xl font-bold text-gray-900 font-meal mb-6 text-center">
+            <div className="bg-dark-bg-2 rounded-xl border border-primary/30 p-6">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
                 Payment Instructions
               </h3>
 
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center justify-between p-4 bg-white rounded-lg">
+              <div className="space-y-3 mb-5">
+                <div className="flex items-center justify-between p-4 bg-dark-form rounded-xl border border-dark-border/40">
                   <div>
-                    <div className="text-sm text-gray-600 mb-1">{paymentInfo.label}</div>
-                    <div className="text-lg font-bold text-gray-900">{paymentInfo.contact}</div>
+                    <div className="text-dark-text-muted text-xs mb-1 uppercase tracking-wider">{paymentInfo.label}</div>
+                    <div className="text-white font-bold">{paymentInfo.contact}</div>
                   </div>
                   <button
                     onClick={handleCopy}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                      copied
+                        ? 'bg-green-600/20 text-green-400 border border-green-600/30'
+                        : 'bg-primary hover:bg-primary-hover text-white'
+                    }`}
                   >
-                    {copied ? <Check size={18} /> : <Copy size={18} />}
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-white rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-dark-form rounded-xl border border-dark-border/40">
                   <div>
-                    <div className="text-sm text-gray-600 mb-1">Amount to Send</div>
-                    <div className="text-3xl font-bold text-primary">
-                      ${totalPrice.toFixed(2)}
-                    </div>
+                    <div className="text-dark-text-muted text-xs mb-1 uppercase tracking-wider">Amount to Send</div>
+                    <div className="text-2xl font-bold text-primary">${totalPrice.toFixed(2)}</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-yellow-800 font-semibold">
-                  Important: Please include your order number (#{orderId.slice(0, 8)}) in the payment note
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-5">
+                <p className="text-xs font-semibold text-primary">
+                  Important: Include order #{orderId.slice(0, 8)} in your payment note
                 </p>
               </div>
 
-              <div className="text-sm text-gray-700 space-y-2">
-                <p className="font-semibold">Next Steps:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>Open {paymentMethod === 'zelle' ? 'Zelle' : 'Venmo'} app</li>
-                  <li>Send ${totalPrice.toFixed(2)} to {paymentInfo.contact}</li>
-                  <li>Add order #{orderId.slice(0, 8)} in the note</li>
-                  <li>Click "I've Completed Payment" below</li>
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-dark-text uppercase tracking-wider">Next Steps</p>
+                <ol className="space-y-1.5">
+                  {[
+                    `Open ${paymentMethod === 'zelle' ? 'Zelle' : 'Venmo'} app`,
+                    `Send $${totalPrice.toFixed(2)} to ${paymentInfo.contact}`,
+                    `Add order #${orderId.slice(0, 8)} in the note`,
+                    `Click "I've Sent Payment" below`,
+                  ].map((step, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="w-5 h-5 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary text-[10px] font-bold flex-shrink-0 mt-0.5">
+                        {i + 1}
+                      </span>
+                      <span className="text-dark-text text-sm">{step}</span>
+                    </li>
+                  ))}
                 </ol>
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-6 mb-8">
-              <h4 className="font-semibold text-gray-900 mb-3">Order Confirmation</h4>
-              <p className="text-sm text-gray-600">
-                A confirmation email has been sent to <strong>{email}</strong> with your order details and payment instructions.
+            <div className="bg-dark-bg-2 rounded-xl border border-dark-border/40 p-4">
+              <p className="text-dark-text text-sm">
+                A confirmation email will be sent to <span className="text-white font-semibold">{email}</span>
               </p>
             </div>
 
             {emailError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-red-800">
-                  <strong>Error:</strong> {emailError}
-                </p>
-                <p className="text-xs text-red-600 mt-1">
-                  Please try again or contact support if the issue persists.
-                </p>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-red-400 text-sm font-semibold">{emailError}</p>
+                  <p className="text-red-400/70 text-xs mt-1">Please try again or contact support.</p>
+                </div>
               </div>
             )}
 
-            <Button
+            <button
               onClick={handleConfirm}
               disabled={sendingEmails}
-              className="w-full py-4 text-lg"
+              className="w-full py-4 bg-primary hover:bg-primary-hover active:bg-primary-active disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(74,144,226,0.3)] text-sm"
             >
               {sendingEmails ? (
                 <span className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white"></div>
                   Sending Confirmation...
                 </span>
               ) : (
-                "I've Completed Payment"
+                "I've Sent Payment"
               )}
-            </Button>
+            </button>
 
-            <p className="text-center text-sm text-gray-500 mt-4">
+            <p className="text-center text-dark-text-muted text-xs">
               Our team will verify your payment and confirm your order shortly
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-10 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
-              <CheckCircle className="text-green-600" size={48} />
+          <div className="bg-dark-bg-2 rounded-2xl border border-dark-border/40 p-12 text-center">
+            <div className="w-20 h-20 rounded-full bg-green-500/10 border-2 border-green-500/30 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="text-green-400" size={40} />
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 font-meal mb-4">
-              Thank You!
-            </h2>
-            <p className="text-lg text-gray-600 mb-6">
-              We've received your payment confirmation.
-            </p>
-            <p className="text-gray-600 mb-8">
+            <h2 className="text-3xl font-bold text-white font-meal mb-3">Thank You!</h2>
+            <p className="text-dark-text mb-2">We've received your payment confirmation.</p>
+            <p className="text-dark-text-muted text-sm mb-8">
               You'll receive an email once we verify your payment and confirm your order.
             </p>
-            <div className="inline-block">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-sm text-gray-500">Redirecting to homepage...</p>
+            <div className="flex items-center justify-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-dark-border border-t-primary"></div>
+              <p className="text-dark-text-muted text-sm">Redirecting to homepage...</p>
             </div>
-          </div>
-        )}
-
-        {!confirmed && (
-          <div className="text-center mt-6">
-            <Link
-              to="/"
-              className="text-sm text-gray-600 hover:text-primary transition-colors"
-            >
-              Return to Homepage
-            </Link>
           </div>
         )}
       </main>

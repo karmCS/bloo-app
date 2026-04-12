@@ -1,5 +1,5 @@
 import { Meal } from '../lib/supabase';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Flame } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useState } from 'react';
 
@@ -25,83 +25,81 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 group border border-gray-100 flex flex-col"
+    <div
+      className="bg-dark-bg-2 rounded-2xl overflow-hidden cursor-pointer group border border-dark-border/40 hover:border-primary/40 transition-all duration-300 hover:shadow-[0px_8px_24px_rgba(74,144,226,0.15)] flex flex-col"
+      onClick={onClick}
     >
-      <div onClick={onClick} className="cursor-pointer">
-        <div className="aspect-[4/3] overflow-hidden bg-gray-100">
-          <img
-            src={meal.image_url}
-            alt={meal.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-          />
+      <div className="relative overflow-hidden" style={{ height: '160px' }}>
+        <img
+          src={meal.image_url}
+          alt={meal.name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark-bg-2/80 via-transparent to-transparent"></div>
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 bg-dark-bg-1/80 backdrop-blur-sm rounded-full border border-dark-border/60">
+          <Flame size={11} className="text-primary" />
+          <span className="text-white text-xs font-semibold">{meal.calories}</span>
+          <span className="text-dark-text-muted text-[10px]">cal</span>
         </div>
       </div>
-      <div className="p-6 flex-1 flex flex-col" onClick={onClick}>
-        <h3 className="text-2xl font-bold text-gray-900 mb-1 font-meal group-hover:text-primary transition-colors duration-300">
+
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="text-sm font-semibold text-white mb-0.5 font-meal group-hover:text-primary transition-colors duration-200 line-clamp-2 leading-snug">
           {meal.name}
         </h3>
-        <p className="text-sm text-gray-600 font-vendor tracking-wide">
-          {meal.vendor}
+        <p className="text-dark-text-muted text-xs font-vendor mb-3">
+          by {meal.vendor}
         </p>
 
-        {meal.description && (
-          <p className="text-sm text-gray-600 mt-3 leading-relaxed line-clamp-2">
-            {meal.description}
-          </p>
-        )}
-
-        <div className="flex justify-between items-center mt-6 mb-5 pb-5 border-b border-gray-100">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-primary">{meal.calories}</span>
-            <span className="text-sm text-gray-500 uppercase tracking-wider">cal</span>
+        <div className="flex items-center gap-3 mb-3 pb-3 border-b border-dark-border/40">
+          <div className="flex-1 text-center">
+            <div className="text-white text-xs font-semibold">{meal.protein}g</div>
+            <div className="text-dark-text-muted text-[10px] uppercase tracking-wider">protein</div>
           </div>
-          <div className="flex gap-4 text-sm">
-            <div className="text-center">
-              <div className="font-semibold text-gray-900">{meal.protein}g</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider">protein</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-gray-900">{meal.carbs}g</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider">carbs</div>
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-gray-900">{meal.fats}g</div>
-              <div className="text-xs text-gray-500 uppercase tracking-wider">fat</div>
-            </div>
+          <div className="w-px h-6 bg-dark-border/40"></div>
+          <div className="flex-1 text-center">
+            <div className="text-white text-xs font-semibold">{meal.carbs}g</div>
+            <div className="text-dark-text-muted text-[10px] uppercase tracking-wider">carbs</div>
+          </div>
+          <div className="w-px h-6 bg-dark-border/40"></div>
+          <div className="flex-1 text-center">
+            <div className="text-white text-xs font-semibold">{meal.fats}g</div>
+            <div className="text-dark-text-muted text-[10px] uppercase tracking-wider">fat</div>
           </div>
         </div>
 
         {meal.dietary_tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {meal.dietary_tags.map((tag, index) => (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {meal.dietary_tags.slice(0, 2).map((tag, index) => (
               <span
                 key={index}
-                className="inline-block px-3 py-1 bg-blue-50 text-primary text-xs font-semibold rounded-full uppercase tracking-wide"
+                className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-semibold rounded-full uppercase tracking-wide border border-primary/20"
               >
                 {tag}
               </span>
             ))}
+            {meal.dietary_tags.length > 2 && (
+              <span className="px-2 py-0.5 bg-dark-form text-dark-text text-[10px] rounded-full border border-dark-border/40">
+                +{meal.dietary_tags.length - 2}
+              </span>
+            )}
           </div>
         )}
 
-        <div className="mt-auto pt-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-gray-900">${meal.price.toFixed(2)}</span>
-            </div>
-            <button
-              onClick={handleAddToCart}
-              disabled={adding}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                adding
-                  ? 'bg-green-500 text-white'
-                  : 'bg-primary text-white hover:bg-blue-700 hover:shadow-lg'
-              }`}
-            >
-              <ShoppingCart size={18} />
-              {adding ? 'Added!' : 'Add to Cart'}
-            </button>
-          </div>
+        <div className="mt-auto flex items-center justify-between gap-3">
+          <span className="text-xl font-bold text-white">${meal.price.toFixed(2)}</span>
+          <button
+            onClick={handleAddToCart}
+            disabled={adding}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
+              adding
+                ? 'bg-green-600/20 text-green-400 border border-green-600/30'
+                : 'bg-primary hover:bg-primary-hover active:bg-primary-active text-white shadow-[0px_4px_12px_rgba(74,144,226,0.3)]'
+            }`}
+          >
+            <ShoppingCart size={14} />
+            {adding ? 'Added!' : 'Add'}
+          </button>
         </div>
       </div>
     </div>

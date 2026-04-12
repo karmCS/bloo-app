@@ -204,14 +204,16 @@ export default function AdminPanel() {
       console.log('Base meal data:', baseMealData);
       console.log('Editing meal?', !!editingMeal, editingMeal?.id);
 
+      const authedSupabase = await getSupabaseWithAuth(session);
+
       if (editingMeal) {
         const updateData = {
           ...baseMealData,
           updated_at: new Date().toISOString(),
         };
-        console.log('Update data being sent to Supabase:', updateData);
+        console.log('meal payload:', updateData);
 
-        const { data, error } = await supabase
+        const { data, error } = await authedSupabase
           .from('meals')
           .update(updateData)
           .eq('id', editingMeal.id)
@@ -220,9 +222,9 @@ export default function AdminPanel() {
         console.log('Update response:', { data, error });
         if (error) throw error;
       } else {
-        console.log('Insert data being sent to Supabase:', baseMealData);
+        console.log('meal payload:', baseMealData);
 
-        const { data, error } = await supabase.from('meals').insert([baseMealData]).select();
+        const { data, error } = await authedSupabase.from('meals').insert([baseMealData]).select();
         console.log('Insert response:', { data, error });
         if (error) throw error;
       }
@@ -260,7 +262,8 @@ export default function AdminPanel() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('meals').delete().eq('id', id);
+      const authedSupabase = await getSupabaseWithAuth(session);
+      const { error } = await authedSupabase.from('meals').delete().eq('id', id);
       if (error) throw error;
       setConfirmDeleteId(null);
       refetch();

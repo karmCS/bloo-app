@@ -2,11 +2,14 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './contexts/CartContext';
 import Homepage from './pages/Homepage';
 import AdminPanel from './pages/AdminPanel';
+import VendorPanel from './pages/VendorPanel';
 import Login from './pages/Login';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentInstructionsPage from './pages/PaymentInstructionsPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import AuthRedirect from './components/AuthRedirect';
+import Unauthorized from './pages/Unauthorized';
 
 function App() {
   return (
@@ -15,6 +18,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Homepage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/auth-redirect" element={<AuthRedirect />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-instructions" element={<PaymentInstructionsPage />} />
@@ -23,6 +28,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/vendor/:slug"
+            element={
+              <ProtectedRoute>
+                <VendorPanel />
               </ProtectedRoute>
             }
           />

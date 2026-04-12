@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useClerk, useUser, useSession } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
+import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { useMeals } from '../hooks/useMeals';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
@@ -8,7 +10,25 @@ import { useNavigate } from 'react-router-dom';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const { session } = useSession();
   const { meals, refetch } = useMeals();
+  const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user || !session) return;
+    const fetchRole = async () => {
+      const authedSupabase = await getSupabaseWithAuth(session);
+      const { data } = await authedSupabase
+        .from('vendor_users')
+        .select('role')
+        .eq('clerk_user_id', user.id)
+        .maybeSingle();
+      if (data?.role === 'superadmin') setWelcomeMessage('Welcome, Admin');
+    };
+    fetchRole();
+  }, [user?.id, session]);
   const [showForm, setShowForm] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -28,9 +48,8 @@ export default function AdminPanel() {
     dietary_tags: '',
   });
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
+  const handleLogout = () => {
+    signOut({ redirectUrl: '/' });
   };
 
   const uploadImage = async (file: File): Promise<string> => {
@@ -190,6 +209,9 @@ export default function AdminPanel() {
               <div>
                 <h1 className="text-2xl font-bold text-primary font-brand tracking-wide">bloo</h1>
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Admin Portal</p>
+                {welcomeMessage && (
+                  <p className="text-xs text-primary font-medium mt-0.5">{welcomeMessage}</p>
+                )}
               </div>
             </div>
             <Button onClick={handleLogout} variant="secondary">

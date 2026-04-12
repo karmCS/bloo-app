@@ -92,35 +92,50 @@ export default async function handler(req: any, res: any) {
     </div>
   `;
 
-  try {
-    const [customerResult, adminResult] = await Promise.all([
-      resend.emails.send({
-        from: 'Bloo <onboarding@resend.dev>',
-        to: email as string,
-        subject: 'Order Confirmation — Bloo',
-        html: customerHtml,
-      }),
-      resend.emails.send({
-        from: 'Bloo Orders <onboarding@resend.dev>',
-        to: ADMIN_EMAIL,
-        subject: `New Order — #${orderShortId}`,
-        html: adminHtml,
-      }),
-    ]);
+  console.log(`[send-order-email] order=${orderShortId} to_customer=${email} to_admin=${ADMIN_EMAIL}`);
 
-    console.log('Emails sent — customer:', customerResult, 'admin:', adminResult);
+  // Send separately — Resend SDK returns { data, error } and never throws on API errors,
+  // so Promise.all would hide which call failed.
+  console.log('[send-order-email] Attempting customer email to:', email, 'from: onboarding@resend.dev');
+  const customerResult = await resend.emails.send({
+    from: 'onboarding@resend.dev',
+    to: email as string,
+    subject: 'Order Confirmation — Bloo',
+    html: customerHtml,
+  });
+  if (customerResult.error) {
+    console.error('[send-order-email] Customer email FAILED:', JSON.stringify(customerResult.error));
+  } else {
+    console.log('[send-order-email] Customer email OK, id:', customerResult.data?.id);
+  }
 
-    return res.status(200).json({
-      success: true,
-      orderId: orderShortId,
-      customerEmailId: customerResult.data?.id,
-      adminEmailId: adminResult.data?.id,
-    });
-  } catch (err) {
-    console.error('Resend error:', err);
+  console.log('[send-order-email] Attempting admin email to:', ADMIN_EMAIL, 'from: onboarding@resend.dev');
+  const adminResult = await resend.emails.send({
+    from: 'onboarding@resend.dev',
+    to: ADMIN_EMAIL,
+    subject: `New Order — #${orderShortId}`,
+    html: adminHtml,
+  });
+  if (adminResult.error) {
+    console.error('[send-order-email] Admin email FAILED:', JSON.stringify(adminResult.error));
+  } else {
+    console.log('[send-order-email] Admin email OK, id:', adminResult.data?.id);
+  }
+
+  if (customerResult.error && adminResult.error) {
     return res.status(500).json({
-      error: 'Failed to send emails',
-      details: err instanceof Error ? err.message : 'Unknown error',
+      error: 'Failed to send both emails',
+      customerError: customerResult.error,
+      adminError: adminResult.error,
     });
   }
+
+  return res.status(200).json({
+    success: true,
+    orderId: orderShortId,
+    customerEmailId: customerResult.data?.id ?? null,
+    customerError: customerResult.error ?? null,
+    adminEmailId: adminResult.data?.id ?? null,
+    adminError: adminResult.error ?? null,
+  });
 }

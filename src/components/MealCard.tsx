@@ -37,10 +37,10 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
         </div>
       </div>
       <div className="p-6 flex-1 flex flex-col" onClick={onClick}>
-        <h3 className="text-2xl font-bold text-gray-900 mb-2 font-meal group-hover:text-primary transition-colors duration-300">
+        <h3 className="text-2xl font-bold text-gray-900 mb-1 font-meal group-hover:text-primary transition-colors duration-300">
           {meal.name}
         </h3>
-        <p className="text-base text-gray-600 font-vendor tracking-wide">
+        <p className="text-sm text-gray-600 font-vendor tracking-wide">
           {meal.vendor}
         </p>
 

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Meal } from '../lib/supabase';
 import { useMeals } from '../hooks/useMeals';
+import { useActiveVendors } from '../hooks/useActiveVendors';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
@@ -10,9 +11,16 @@ import { useCart } from '../contexts/CartContext';
 
 export default function Homepage() {
   const { meals, loading } = useMeals();
+  const { vendors: activeVendors, loading: vendorsLoading } = useActiveVendors();
   const { totalItems } = useCart();
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+
+  const filteredMeals = useMemo(() => {
+    if (!selectedVendorId) return meals;
+    return meals.filter((m) => m.vendor_id === selectedVendorId);
+  }, [meals, selectedVendorId]);
 
   const handleMealClick = (meal: Meal) => {
     setSelectedMeal(meal);
@@ -24,7 +32,8 @@ export default function Homepage() {
     setTimeout(() => setSelectedMeal(null), 300);
   };
 
-  const featuredMeal = meals.length > 0 ? meals[0] : null;
+  const featuredMeal =
+    filteredMeals.length > 0 ? filteredMeals[0] : null;
 
   return (
     <div className="min-h-screen bg-white">
@@ -123,8 +132,9 @@ export default function Homepage() {
             </div>
           )}
 
-          <section className="max-w-7xl mx-auto px-6 pt-20 pb-20">
-            <div className="mb-12">
+          <section className="bg-[#FDF8F3] pt-20 pb-24">
+            <div className="max-w-7xl mx-auto px-6">
+            <div className="mb-8">
               <h3 className="text-4xl font-bold text-gray-900 mb-4 font-meal">
                 This Week's Menu
               </h3>
@@ -133,10 +143,58 @@ export default function Homepage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {meals.map((meal) => (
-                <MealCard key={meal.id} meal={meal} onClick={() => handleMealClick(meal)} />
-              ))}
+            <div className="mb-10 -mx-1 px-1">
+              <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth touch-pan-x [scrollbar-width:thin]">
+                <button
+                  type="button"
+                  onClick={() => setSelectedVendorId(null)}
+                  className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-vendor font-medium transition-colors ${
+                    selectedVendorId === null
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
+                  }`}
+                >
+                  All
+                </button>
+                {vendorsLoading ? (
+                  <div className="flex gap-2 shrink-0 items-center">
+                    <span className="h-9 w-20 animate-pulse rounded-full bg-stone-200/90" />
+                    <span className="h-9 w-24 animate-pulse rounded-full bg-stone-200/90" />
+                    <span className="h-9 w-28 animate-pulse rounded-full bg-stone-200/90" />
+                  </div>
+                ) : (
+                  activeVendors.map((v) => {
+                    const active = selectedVendorId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVendorId(v.id)}
+                        className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-vendor font-medium transition-colors whitespace-nowrap ${
+                          active
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
+                        }`}
+                      >
+                        {v.name}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {filteredMeals.length === 0 ? (
+              <p className="text-center text-gray-500 font-vendor py-16">
+                No meals for this vendor yet. Try another filter.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredMeals.map((meal) => (
+                  <MealCard key={meal.id} meal={meal} onClick={() => handleMealClick(meal)} />
+                ))}
+              </div>
+            )}
             </div>
           </section>
         </>

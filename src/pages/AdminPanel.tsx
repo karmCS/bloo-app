@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import { useClerk, useUser, useSession } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
@@ -67,13 +67,15 @@ export default function AdminPanel() {
   });
 
   const [activeVendors, setActiveVendors] = useState<{ id: string; name: string }[]>([]);
+  const [mealsVendorFilterId, setMealsVendorFilterId] = useState<string | null>(null);
 
   // ── Team state ────────────────────────────────────────────────────────────
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorUsers, setVendorUsers] = useState<VendorUser[]>([]);
   const [showVendorForm, setShowVendorForm] = useState(false);
-  const [showMemberForm, setShowMemberForm] = useState(false);
-  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+  const [showSuperadminForm, setShowSuperadminForm] = useState(false);
+  const [expandedSuperadminId, setExpandedSuperadminId] = useState<string | null>(null);
+  const [showVendorMemberFormVendorId, setShowVendorMemberFormVendorId] = useState<string | null>(null);
   const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
   const [editVendorFormData, setEditVendorFormData] = useState({
@@ -81,7 +83,8 @@ export default function AdminPanel() {
   });
   const [vendorUpdateLoading, setVendorUpdateLoading] = useState(false);
   const [vendorFormLoading, setVendorFormLoading] = useState(false);
-  const [memberFormLoading, setMemberFormLoading] = useState(false);
+  const [superadminFormLoading, setSuperadminFormLoading] = useState(false);
+  const [vendorMemberFormLoading, setVendorMemberFormLoading] = useState(false);
   const [vendorFormData, setVendorFormData] = useState({
     name: '',
     slug: '',
@@ -89,12 +92,35 @@ export default function AdminPanel() {
     venmo_handle: '',
     zelle_contact: '',
   });
-  const [memberFormData, setMemberFormData] = useState({
+  const [superadminFormData, setSuperadminFormData] = useState({
     clerk_user_id: '',
     display_name: '',
-    role: 'vendor' as 'superadmin' | 'vendor',
-    vendor_id: '',
   });
+  const [vendorMemberFormData, setVendorMemberFormData] = useState({
+    clerk_user_id: '',
+    display_name: '',
+  });
+
+  const superadmins = useMemo(
+    () => vendorUsers.filter((u) => u.role === 'superadmin'),
+    [vendorUsers],
+  );
+
+  const vendorMembersByVendorId = useMemo(() => {
+    const map = new Map<string, VendorUser[]>();
+    for (const u of vendorUsers) {
+      if (u.role !== 'vendor' || !u.vendor_id) continue;
+      const list = map.get(u.vendor_id) ?? [];
+      list.push(u);
+      map.set(u.vendor_id, list);
+    }
+    return map;
+  }, [vendorUsers]);
+
+  const filteredMeals = useMemo(() => {
+    if (!mealsVendorFilterId) return meals;
+    return meals.filter((m) => m.vendor_id === mealsVendorFilterId);
+  }, [meals, mealsVendorFilterId]);
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -364,9 +390,14 @@ export default function AdminPanel() {
     setShowVendorForm(false);
   };
 
-  const resetMemberForm = () => {
-    setMemberFormData({ clerk_user_id: '', display_name: '', role: 'vendor', vendor_id: '' });
-    setShowMemberForm(false);
+  const resetSuperadminForm = () => {
+    setSuperadminFormData({ clerk_user_id: '', display_name: '' });
+    setShowSuperadminForm(false);
+  };
+
+  const resetVendorMemberForm = () => {
+    setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
+    setShowVendorMemberFormVendorId(null);
   };
 
   const handleVendorSubmit = async (e: React.FormEvent) => {
@@ -392,24 +423,46 @@ export default function AdminPanel() {
     }
   };
 
-  const handleMemberSubmit = async (e: React.FormEvent) => {
+  const handleSuperadminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMemberFormLoading(true);
+    setSuperadminFormLoading(true);
     try {
       const authedSupabase = await getSupabaseWithAuth(session);
       const { error } = await authedSupabase.from('vendor_users').insert([{
-        clerk_user_id: memberFormData.clerk_user_id.trim(),
-        display_name: memberFormData.display_name.trim(),
-        role: memberFormData.role,
-        vendor_id: memberFormData.role === 'vendor' ? memberFormData.vendor_id : null,
+        clerk_user_id: superadminFormData.clerk_user_id.trim(),
+        display_name: superadminFormData.display_name.trim(),
+        role: 'superadmin' as const,
+        vendor_id: null,
       }]);
       if (error) throw error;
-      resetMemberForm();
+      resetSuperadminForm();
       fetchTeamData();
     } catch (err) {
-      alert(`Failed to add member: ${(err as any)?.message || 'Please try again.'}`);
+      alert(`Failed to add super admin: ${(err as any)?.message || 'Please try again.'}`);
     } finally {
-      setMemberFormLoading(false);
+      setSuperadminFormLoading(false);
+    }
+  };
+
+  const handleVendorMemberSubmit = async (e: React.FormEvent, vendorId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setVendorMemberFormLoading(true);
+    try {
+      const authedSupabase = await getSupabaseWithAuth(session);
+      const { error } = await authedSupabase.from('vendor_users').insert([{
+        clerk_user_id: vendorMemberFormData.clerk_user_id.trim(),
+        display_name: vendorMemberFormData.display_name.trim(),
+        role: 'vendor' as const,
+        vendor_id: vendorId,
+      }]);
+      if (error) throw error;
+      resetVendorMemberForm();
+      fetchTeamData();
+    } catch (err) {
+      alert(`Failed to add vendor account: ${(err as any)?.message || 'Please try again.'}`);
+    } finally {
+      setVendorMemberFormLoading(false);
     }
   };
 
@@ -633,11 +686,51 @@ export default function AdminPanel() {
               </div>
             )}
 
+            {meals.length > 0 && (
+              <div className="mb-6 -mx-1 px-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Filter by vendor</p>
+                <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth touch-pan-x [scrollbar-width:thin]">
+                  <button
+                    type="button"
+                    onClick={() => setMealsVendorFilterId(null)}
+                    className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-vendor font-medium transition-colors ${
+                      mealsVendorFilterId === null
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {activeVendors.map((v) => {
+                    const active = mealsVendorFilterId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setMealsVendorFilterId(v.id)}
+                        className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-vendor font-medium transition-colors whitespace-nowrap ${
+                          active
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
+                        }`}
+                      >
+                        {v.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
               {meals.length === 0 ? (
                 <div className="p-16 text-center">
                   <UtensilsCrossed className="mx-auto text-gray-300 mb-4" size={64} />
                   <p className="text-gray-500 text-lg">No meals added yet. Click "Add New Meal" to get started.</p>
+                </div>
+              ) : filteredMeals.length === 0 ? (
+                <div className="p-16 text-center">
+                  <p className="text-gray-500 text-lg font-vendor">No meals for this vendor. Choose another filter or add a meal.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -655,7 +748,7 @@ export default function AdminPanel() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {meals.map((meal) => (
+                      {filteredMeals.map((meal) => (
                         <tr key={meal.id} className="hover:bg-blue-50/30 transition-colors">
                           <td className="px-6 py-5 whitespace-nowrap">
                             <div className="flex items-center">
@@ -726,12 +819,152 @@ export default function AdminPanel() {
         {activeTab === 'team' && (
           <div className="space-y-12">
 
+            {/* ── Super admins (platform team) ─────────────────────────────── */}
+            <section>
+              <div className="mb-6 flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Super admins</h2>
+                  <p className="text-gray-600">
+                    Full access to this platform. Each admin must use their own Clerk account — do not share one login.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowSuperadminForm(!showSuperadminForm)}
+                  className="flex items-center gap-2 px-6 py-3"
+                >
+                  <Plus size={20} />
+                  {showSuperadminForm ? 'Cancel' : 'Add super admin'}
+                </Button>
+              </div>
+
+              {showSuperadminForm && (
+                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Add super admin</h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Invite a teammate by creating their user in Clerk, then paste their Clerk user ID here. Each person is a separate account.
+                  </p>
+                  <form onSubmit={handleSuperadminSubmit} className="space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={superadminFormData.display_name}
+                          onChange={(e) => setSuperadminFormData({ ...superadminFormData, display_name: e.target.value })}
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
+                          placeholder="Alex Chen"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Clerk User ID
+                        </label>
+                        <input
+                          type="text"
+                          value={superadminFormData.clerk_user_id}
+                          onChange={(e) => setSuperadminFormData({ ...superadminFormData, clerk_user_id: e.target.value })}
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-mono text-sm"
+                          placeholder="user_2abc..."
+                        />
+                        <p className="mt-1.5 text-xs text-gray-400">
+                          Clerk Dashboard → Users → select the user → copy User ID
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button type="submit" className="px-8 py-3" disabled={superadminFormLoading}>
+                        {superadminFormLoading ? 'Adding...' : 'Add super admin'}
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={resetSuperadminForm} className="px-8 py-3">
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                {superadmins.length === 0 ? (
+                  <div className="p-16 text-center">
+                    <p className="text-gray-500 text-lg">No super admins yet. Add one to get started.</p>
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">Name</th>
+                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-right">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {superadmins.map((member) => {
+                        const isExpanded = expandedSuperadminId === member.id;
+                        const addedOn = new Date(member.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric', month: 'short', day: 'numeric',
+                        });
+                        return (
+                          <Fragment key={member.id}>
+                            <tr
+                              onClick={() => setExpandedSuperadminId(isExpanded ? null : member.id)}
+                              className="hover:bg-blue-50/30 transition-colors cursor-pointer select-none"
+                            >
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-semibold text-gray-800">{member.display_name}</span>
+                                  <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                                    superadmin
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <ChevronDown
+                                  size={18}
+                                  className={`ml-auto text-gray-400 transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}
+                                />
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr className="bg-blue-50/40">
+                                <td colSpan={2} className="px-6 py-5">
+                                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-sm">
+                                    <div>
+                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Display Name</dt>
+                                      <dd className="text-gray-700">{member.display_name}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Clerk User ID</dt>
+                                      <dd className="font-mono text-gray-700 break-all">{member.clerk_user_id}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Added On</dt>
+                                      <dd className="text-gray-700">{addedOn}</dd>
+                                    </div>
+                                  </dl>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </section>
+
             {/* ── Vendors section ──────────────────────────────────────────── */}
             <section>
               <div className="mb-6 flex justify-between items-center">
                 <div>
                   <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Vendors</h2>
-                  <p className="text-gray-600">Manage partner vendors on the platform</p>
+                  <p className="text-gray-600">
+                    Partner businesses on the platform. Open a row to manage the business and each vendor&apos;s separate sign-in accounts.
+                  </p>
                 </div>
                 <Button
                   onClick={() => setShowVendorForm(!showVendorForm)}
@@ -851,13 +1084,22 @@ export default function AdminPanel() {
                         {vendors.map((vendor) => {
                           const isExpanded = expandedVendorId === vendor.id;
                           const isEditing = editingVendorId === vendor.id;
+                          const accountsForVendor = [...(vendorMembersByVendorId.get(vendor.id) ?? [])].sort(
+                            (a, b) => a.display_name.localeCompare(b.display_name),
+                          );
                           return (
-                            <>
+                            <Fragment key={vendor.id}>
                               <tr
-                                key={vendor.id}
                                 onClick={() => {
                                   if (isEditing) return;
-                                  setExpandedVendorId(isExpanded ? null : vendor.id);
+                                  if (isExpanded) {
+                                    setExpandedVendorId(null);
+                                    setShowVendorMemberFormVendorId(null);
+                                  } else {
+                                    setExpandedVendorId(vendor.id);
+                                    setShowVendorMemberFormVendorId(null);
+                                    setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
+                                  }
                                 }}
                                 className="hover:bg-blue-50/30 transition-colors cursor-pointer select-none"
                               >
@@ -877,287 +1119,193 @@ export default function AdminPanel() {
                               </tr>
 
                               {isExpanded && (
-                                <tr key={`${vendor.id}-detail`} className="bg-blue-50/40">
+                                <tr className="bg-blue-50/40">
                                   <td colSpan={7} className="px-6 py-5">
-                                    {isEditing ? (
-                                      <form onSubmit={(e) => handleVendorUpdate(e, vendor.id)} className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Business Name</label>
-                                            <input type="text" value={editVendorFormData.name} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, name: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                    <div className="space-y-8">
+                                      {isEditing ? (
+                                        <form onSubmit={(e) => handleVendorUpdate(e, vendor.id)} className="space-y-4">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Business Name</label>
+                                              <input type="text" value={editVendorFormData.name} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, name: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Slug</label>
+                                              <input type="text" value={editVendorFormData.slug} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, slug: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none font-mono" />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Contact Email</label>
+                                              <input type="email" value={editVendorFormData.contact_email} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, contact_email: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Venmo Handle</label>
+                                              <input type="text" value={editVendorFormData.venmo_handle} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, venmo_handle: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Zelle Contact</label>
+                                              <input type="text" value={editVendorFormData.zelle_contact} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, zelle_contact: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                            </div>
                                           </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Slug</label>
-                                            <input type="text" value={editVendorFormData.slug} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, slug: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none font-mono" />
+                                          <div className="flex gap-2 pt-1">
+                                            <Button type="submit" className="px-5 py-2 text-sm" disabled={vendorUpdateLoading}>
+                                              {vendorUpdateLoading ? 'Saving...' : 'Save'}
+                                            </Button>
+                                            <Button type="button" variant="secondary" className="px-5 py-2 text-sm" onClick={cancelVendorEdit}>
+                                              Cancel
+                                            </Button>
                                           </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Contact Email</label>
-                                            <input type="email" value={editVendorFormData.contact_email} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, contact_email: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                        </form>
+                                      ) : (
+                                        <>
+                                          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-10 gap-y-3 text-sm mb-5">
+                                            <div>
+                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Business Name</dt>
+                                              <dd className="text-gray-700">{vendor.name}</dd>
+                                            </div>
+                                            <div>
+                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Slug</dt>
+                                              <dd className="font-mono text-gray-700">{vendor.slug}</dd>
+                                            </div>
+                                            <div>
+                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Contact Email</dt>
+                                              <dd className="text-gray-700">{vendor.contact_email}</dd>
+                                            </div>
+                                            <div>
+                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Venmo Handle</dt>
+                                              <dd className="text-gray-700">{vendor.venmo_handle ?? '—'}</dd>
+                                            </div>
+                                            <div>
+                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Zelle Contact</dt>
+                                              <dd className="text-gray-700">{vendor.zelle_contact ?? '—'}</dd>
+                                            </div>
+                                            <div>
+                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Added On</dt>
+                                              <dd className="text-gray-700">{new Date(vendor.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</dd>
+                                            </div>
+                                          </dl>
+                                          <div className="flex gap-2 flex-wrap">
+                                            <Button className="px-5 py-2 text-sm" onClick={(e) => { e.stopPropagation(); startVendorEdit(vendor); }}>
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              variant="secondary"
+                                              className="px-5 py-2 text-sm"
+                                              onClick={(e) => { e.stopPropagation(); handleVendorToggleActive(vendor); }}
+                                            >
+                                              {vendor.is_active ? 'Deactivate' : 'Activate'}
+                                            </Button>
+                                            <Button
+                                              variant="secondary"
+                                              className="px-5 py-2 text-sm"
+                                              onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendor/${vendor.slug}`); }}
+                                            >
+                                              View Panel
+                                            </Button>
                                           </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Venmo Handle</label>
-                                            <input type="text" value={editVendorFormData.venmo_handle} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, venmo_handle: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                                        </>
+                                      )}
+
+                                      <div className="border-t border-gray-200 pt-6">
+                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">
+                                          Vendor accounts
+                                        </h4>
+                                        <p className="text-sm text-gray-600 mb-4">
+                                          Each staff member signs in with their own Clerk account. Add one row per person — do not reuse a single &quot;master&quot; login for everyone.
+                                        </p>
+
+                                        {accountsForVendor.length > 0 ? (
+                                          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white/80 mb-4">
+                                            <table className="w-full text-sm">
+                                              <thead className="bg-gray-50 border-b border-gray-100">
+                                                <tr>
+                                                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
+                                                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Clerk User ID</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody className="divide-y divide-gray-100">
+                                                {accountsForVendor.map((acc) => (
+                                                  <tr key={acc.id}>
+                                                    <td className="px-4 py-2 font-medium text-gray-900">{acc.display_name}</td>
+                                                    <td className="px-4 py-2 font-mono text-xs text-gray-700 break-all">{acc.clerk_user_id}</td>
+                                                  </tr>
+                                                ))}
+                                              </tbody>
+                                            </table>
                                           </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Zelle Contact</label>
-                                            <input type="text" value={editVendorFormData.zelle_contact} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, zelle_contact: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-                                          </div>
-                                        </div>
-                                        <div className="flex gap-2 pt-1">
-                                          <Button type="submit" className="px-5 py-2 text-sm" disabled={vendorUpdateLoading}>
-                                            {vendorUpdateLoading ? 'Saving...' : 'Save'}
-                                          </Button>
-                                          <Button type="button" variant="secondary" className="px-5 py-2 text-sm" onClick={cancelVendorEdit}>
-                                            Cancel
-                                          </Button>
-                                        </div>
-                                      </form>
-                                    ) : (
-                                      <>
-                                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-10 gap-y-3 text-sm mb-5">
-                                          <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Business Name</dt>
-                                            <dd className="text-gray-700">{vendor.name}</dd>
-                                          </div>
-                                          <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Slug</dt>
-                                            <dd className="font-mono text-gray-700">{vendor.slug}</dd>
-                                          </div>
-                                          <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Contact Email</dt>
-                                            <dd className="text-gray-700">{vendor.contact_email}</dd>
-                                          </div>
-                                          <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Venmo Handle</dt>
-                                            <dd className="text-gray-700">{vendor.venmo_handle ?? '—'}</dd>
-                                          </div>
-                                          <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Zelle Contact</dt>
-                                            <dd className="text-gray-700">{vendor.zelle_contact ?? '—'}</dd>
-                                          </div>
-                                          <div>
-                                            <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Added On</dt>
-                                            <dd className="text-gray-700">{new Date(vendor.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</dd>
-                                          </div>
-                                        </dl>
-                                        <div className="flex gap-2">
-                                          <Button className="px-5 py-2 text-sm" onClick={(e) => { e.stopPropagation(); startVendorEdit(vendor); }}>
-                                            Edit
-                                          </Button>
+                                        ) : (
+                                          <p className="text-sm text-gray-500 mb-4">No vendor accounts yet for this business.</p>
+                                        )}
+
+                                        {showVendorMemberFormVendorId === vendor.id ? (
+                                          <form
+                                            onSubmit={(e) => handleVendorMemberSubmit(e, vendor.id)}
+                                            className="rounded-xl border border-primary/30 bg-white p-5 space-y-4"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                              <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-1">Display name</label>
+                                                <input
+                                                  type="text"
+                                                  value={vendorMemberFormData.display_name}
+                                                  onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, display_name: e.target.value })}
+                                                  required
+                                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                                                  placeholder="Jamie Lee"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-1">Clerk User ID</label>
+                                                <input
+                                                  type="text"
+                                                  value={vendorMemberFormData.clerk_user_id}
+                                                  onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, clerk_user_id: e.target.value })}
+                                                  required
+                                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none font-mono"
+                                                  placeholder="user_2..."
+                                                />
+                                              </div>
+                                            </div>
+                                            <div className="flex gap-2 flex-wrap">
+                                              <Button type="submit" className="px-5 py-2 text-sm" disabled={vendorMemberFormLoading}>
+                                                {vendorMemberFormLoading ? 'Adding...' : 'Add account'}
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                variant="secondary"
+                                                className="px-5 py-2 text-sm"
+                                                onClick={() => resetVendorMemberForm()}
+                                              >
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </form>
+                                        ) : (
                                           <Button
+                                            type="button"
                                             variant="secondary"
                                             className="px-5 py-2 text-sm"
-                                            onClick={(e) => { e.stopPropagation(); handleVendorToggleActive(vendor); }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
+                                              setShowVendorMemberFormVendorId(vendor.id);
+                                            }}
                                           >
-                                            {vendor.is_active ? 'Deactivate' : 'Activate'}
+                                            <Plus size={16} className="inline mr-1.5 -mt-0.5" />
+                                            Add vendor account
                                           </Button>
-                                          <Button
-                                            variant="secondary"
-                                            className="px-5 py-2 text-sm"
-                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendor/${vendor.slug}`); }}
-                                          >
-                                            View Panel
-                                          </Button>
-                                        </div>
-                                      </>
-                                    )}
+                                        )}
+                                      </div>
+                                    </div>
                                   </td>
                                 </tr>
                               )}
-                            </>
+                            </Fragment>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
-            </section>
-
-            {/* ── Team Members section ──────────────────────────────────────── */}
-            <section>
-              <div className="mb-6 flex justify-between items-center">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900 font-meal mb-1">Team Members</h2>
-                  <p className="text-gray-600">Manage who has access to the admin platform</p>
-                </div>
-                <Button
-                  onClick={() => setShowMemberForm(!showMemberForm)}
-                  className="flex items-center gap-2 px-6 py-3"
-                >
-                  <Plus size={20} />
-                  {showMemberForm ? 'Cancel' : 'Add Member'}
-                </Button>
-              </div>
-
-              {showMemberForm && (
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">Add Team Member</h3>
-                  <form onSubmit={handleMemberSubmit} className="space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Display Name
-                        </label>
-                        <input
-                          type="text"
-                          value={memberFormData.display_name}
-                          onChange={(e) => setMemberFormData({ ...memberFormData, display_name: e.target.value })}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                          placeholder="John Smith"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Clerk User ID
-                        </label>
-                        <input
-                          type="text"
-                          value={memberFormData.clerk_user_id}
-                          onChange={(e) => setMemberFormData({ ...memberFormData, clerk_user_id: e.target.value })}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-mono text-sm"
-                          placeholder="user_2abc..."
-                        />
-                        <p className="mt-1.5 text-xs text-gray-400">
-                          Find this in Clerk Dashboard → Users → click the user
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Role
-                        </label>
-                        <select
-                          value={memberFormData.role}
-                          onChange={(e) => {
-                            const role = e.target.value as 'superadmin' | 'vendor';
-                            setMemberFormData({ ...memberFormData, role, vendor_id: '' });
-                          }}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-white"
-                        >
-                          <option value="vendor">vendor</option>
-                          <option value="superadmin">superadmin</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className={`block text-sm font-semibold mb-2 ${memberFormData.role === 'superadmin' ? 'text-gray-400' : 'text-gray-700'}`}>
-                          Vendor
-                        </label>
-                        <select
-                          value={memberFormData.vendor_id}
-                          onChange={(e) => setMemberFormData({ ...memberFormData, vendor_id: e.target.value })}
-                          required={memberFormData.role === 'vendor'}
-                          disabled={memberFormData.role === 'superadmin'}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-white disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-                        >
-                          <option value="">— select a vendor —</option>
-                          {vendors.map((v) => (
-                            <option key={v.id} value={v.id}>{v.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 pt-2">
-                      <Button type="submit" className="px-8 py-3" disabled={memberFormLoading}>
-                        {memberFormLoading ? 'Adding...' : 'Add Member'}
-                      </Button>
-                      <Button type="button" variant="secondary" onClick={resetMemberForm} className="px-8 py-3">
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                {vendorUsers.length === 0 ? (
-                  <div className="p-16 text-center">
-                    <p className="text-gray-500 text-lg">No team members yet. Add one to get started.</p>
-                  </div>
-                ) : (
-                  <table className="w-full">
-                    <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">Member</th>
-                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">Vendor</th>
-                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-right">Details</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {vendorUsers.map((member) => {
-                        const isExpanded = expandedMemberId === member.id;
-                        const addedOn = new Date(member.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric', month: 'short', day: 'numeric',
-                        });
-                        return (
-                          <>
-                            <tr
-                              key={member.id}
-                              onClick={() => setExpandedMemberId(isExpanded ? null : member.id)}
-                              className="hover:bg-blue-50/30 transition-colors cursor-pointer select-none"
-                            >
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm font-semibold text-gray-800">{member.display_name}</span>
-                                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                    member.role === 'superadmin'
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : 'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    {member.role}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-600">
-                                {member.vendors?.name ?? '—'}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <ChevronDown
-                                  size={18}
-                                  className={`ml-auto text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                                />
-                              </td>
-                            </tr>
-                            {isExpanded && (
-                              <tr key={`${member.id}-detail`} className="bg-blue-50/40">
-                                <td colSpan={3} className="px-6 py-5">
-                                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-sm">
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Display Name</dt>
-                                      <dd className="text-gray-700">{member.display_name}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Clerk User ID</dt>
-                                      <dd className="font-mono text-gray-700 break-all">{member.clerk_user_id}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Role</dt>
-                                      <dd className="text-gray-700 capitalize">{member.role}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Vendor</dt>
-                                      <dd className="text-gray-700">{member.vendors?.name ?? '—'}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Added On</dt>
-                                      <dd className="text-gray-700">{addedOn}</dd>
-                                    </div>
-                                  </dl>
-                                </td>
-                              </tr>
-                            )}
-                          </>
-                        );
-                      })}
-                    </tbody>
-                  </table>
                 )}
               </div>
             </section>

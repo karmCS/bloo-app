@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useClerk, UserProfile } from '@clerk/react';
 import { supabase } from '../lib/supabase';
 import { UtensilsCrossed, LogOut, UserCog } from 'lucide-react';
@@ -8,6 +8,7 @@ import Button from '../components/Button';
 // TODO: Build out the vendor panel UI for managing vendor-specific meals and orders.
 export default function VendorPanel() {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const { signOut } = useClerk();
   const [vendorName, setVendorName] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
@@ -30,16 +31,19 @@ export default function VendorPanel() {
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
               <UtensilsCrossed className="text-primary" size={28} />
-              <div>
+              <div className="text-left">
                 <h1 className="text-2xl font-bold text-primary font-brand tracking-wide">bloo</h1>
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Vendor Portal</p>
                 {vendorName && (
                   <p className="text-xs text-primary font-medium mt-0.5">Welcome, {vendorName}</p>
                 )}
               </div>
-            </div>
+            </button>
             <div className="flex items-center gap-3">
               <Button variant="secondary" onClick={() => setShowProfile(true)}>
                 <UserCog size={18} className="mr-2" />

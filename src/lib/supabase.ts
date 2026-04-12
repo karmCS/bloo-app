@@ -33,6 +33,7 @@ export interface Meal {
   fats: number;
   ingredients: string[];
   dietary_tags: string[];
+  vendor_id?: string | null;
   created_at: string;
   updated_at: string;
 }

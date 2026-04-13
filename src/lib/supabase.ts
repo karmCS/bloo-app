@@ -21,15 +21,39 @@ if (!supabaseAnonKey) {
 /** Must match cart_items RLS (`request.headers` → `x-cart-session-id`). */
 const CART_SESSION_HEADER = 'x-cart-session-id';
 
+const CART_SESSION_STORAGE_KEY = 'cart_session_id';
+
+/** UUID v4 — matches output of `crypto.randomUUID()` (cart session ids). */
+const CART_SESSION_UUID_V4_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidCartSessionId(value: string): boolean {
+  return CART_SESSION_UUID_V4_REGEX.test(value);
+}
+
+/**
+ * Returns the anonymous cart session id from localStorage, creating one if needed.
+ *
+ * Uses `crypto.randomUUID()` (V4 UUID from the platform CSPRNG) so identifiers are
+ * not guessable or enumerable. An attacker who could predict another shopper’s
+ * session id could pair it with a forged `x-cart-session-id` header and bypass
+ * cart row-level security. Do not use `Math.random()`, `Date.now()`, or similar
+ * for this value.
+ *
+ * Persists in **localStorage** (not sessionStorage) so the cart survives tab close
+ * and browser restart. If a stored value is missing or not a valid UUID v4
+ * (tampering or legacy `session_*` ids), a new id is generated and stored.
+ */
 export function getOrCreateCartSessionId(): string {
   if (typeof window === 'undefined') {
     return '';
   }
-  let sessionId = localStorage.getItem('cart_session_id');
-  if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('cart_session_id', sessionId);
+  const existing = localStorage.getItem(CART_SESSION_STORAGE_KEY);
+  if (existing && isValidCartSessionId(existing)) {
+    return existing;
   }
+  const sessionId = crypto.randomUUID();
+  localStorage.setItem(CART_SESSION_STORAGE_KEY, sessionId);
   return sessionId;
 }
 

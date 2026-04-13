@@ -23,7 +23,13 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItemWithMeal[]>([]);
   const [loading, setLoading] = useState(true);
-  const sessionId = getOrCreateCartSessionId();
+  /**
+   * Resolve cart session once per provider mount via lazy useState initializer so
+   * the id is stable before the first fetch/effect and matches every Supabase
+   * call in this tree (avoids a one-render race where header vs query could differ).
+   * Implementation: `getOrCreateCartSessionId()` in `../lib/supabase.ts`.
+   */
+  const [sessionId] = useState(() => getOrCreateCartSessionId());
 
   const fetchCartItems = async () => {
     try {

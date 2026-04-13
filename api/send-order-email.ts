@@ -6,7 +6,120 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bloo.com';
 const PAYMENT_INFO = {
   zelle: { contact: 'payments@bloo.com', label: 'Email/Phone' },
   venmo: { contact: '@bloo-meals', label: 'Venmo Handle' },
-};
+} as const;
+
+/** Allowed top-level JSON keys — rejects mass-assignment / unexpected fields (OWASP). */
+const ALLOWED_BODY_KEYS = new Set([
+  'orderId',
+  'email',
+  'paymentMethod',
+  'totalPrice',
+  'items',
+  'csrfToken',
+]);
+
+const ITEM_KEYS = new Set(['meal_name', 'price', 'quantity']);
+
+// —— Rate limiting (in-memory, per serverless instance — see comment below) ——
+const MAX_ORDERS_PER_IP_PER_HOUR = 5;
+const RATE_WINDOW_MS = 60 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+
+/** IP → timestamps of successful rate-limit checks (request times). */
+const rateLimitBuckets = new Map<string, number[]>();
+
+/**
+ * On Vercel, each function instance has its own memory; limits apply per warm
+ * instance, not globally. Still reduces abuse without external services.
+ */
+setInterval(() => {
+  const cutoff = Date.now() - RATE_WINDOW_MS;
+  for (const [ip, times] of rateLimitBuckets.entries()) {
+    const kept = times.filter((t) => t > cutoff);
+    if (kept.length === 0) rateLimitBuckets.delete(ip);
+    else rateLimitBuckets.set(ip, kept);
+  }
+}, CLEANUP_INTERVAL_MS);
+
+function getClientIp(req: { headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
+  const xff = req.headers?.['x-forwarded-for'];
+  const first = Array.isArray(xff) ? xff[0] : xff?.split(',')[0]?.trim();
+  return first || req.socket?.remoteAddress || 'unknown';
+}
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const windowStart = now - RATE_WINDOW_MS;
+  let times = rateLimitBuckets.get(ip) ?? [];
+  times = times.filter((t) => t > windowStart);
+  if (times.length >= MAX_ORDERS_PER_IP_PER_HOUR) {
+    rateLimitBuckets.set(ip, times);
+    return false;
+  }
+  times.push(now);
+  rateLimitBuckets.set(ip, times);
+  return true;
+}
+
+// —— Validation helpers ——
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** UUID v4 from crypto.randomUUID() (client CSRF) or Postgres order id. */
+const UUID_V4_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Postgres UUID (any version). */
+const UUID_GENERIC_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidPriceDecimals(n: number): boolean {
+  if (!Number.isFinite(n) || n <= 0) return false;
+  const cents = Math.round(n * 100);
+  return Math.abs(cents / 100 - n) < 1e-9;
+}
+
+interface ValidatedItem {
+  meal_name: string;
+  price: number;
+  quantity: number;
+}
+
+function validateItems(raw: unknown): { ok: true; items: ValidatedItem[] } | { ok: false } {
+  if (!Array.isArray(raw) || raw.length === 0) return { ok: false };
+
+  const items: ValidatedItem[] = [];
+
+  for (const el of raw) {
+    if (el === null || typeof el !== 'object' || Array.isArray(el)) return { ok: false };
+    const keys = Object.keys(el as object);
+    if (keys.length !== ITEM_KEYS.size || keys.some((k) => !ITEM_KEYS.has(k))) return { ok: false };
+
+    const { meal_name, price, quantity } = el as Record<string, unknown>;
+
+    if (typeof meal_name !== 'string' || meal_name.trim().length === 0 || meal_name.length > 500) {
+      return { ok: false };
+    }
+    if (typeof price !== 'number' || !isValidPriceDecimals(price) || price > 1_000_000) {
+      return { ok: false };
+    }
+    if (
+      typeof quantity !== 'number' ||
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > 99
+    ) {
+      return { ok: false };
+    }
+
+    items.push({ meal_name: meal_name.trim(), price, quantity });
+  }
+
+  return { ok: true, items };
+}
+
+const GENERIC_FAILURE = 'Order processing failed. Please try again.';
+const INVALID_ORDER_DATA = 'Invalid order details. Please refresh the page and try again.';
 
 interface OrderItem {
   meal_name: string;
@@ -14,41 +127,100 @@ interface OrderItem {
   quantity: number;
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: { method?: string; headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string }; body?: unknown }, res: { status: (n: number) => { json: (b: object) => void } }) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!RESEND_API_KEY) {
     console.error('RESEND_API_KEY is not set in environment variables');
-    return res.status(500).json({ error: 'Email service not configured: RESEND_API_KEY missing' });
+    return res.status(500).json({ error: GENERIC_FAILURE });
   }
 
-  const { orderId, email, paymentMethod, totalPrice, items } = req.body;
-
-  if (!orderId || !email || !paymentMethod || totalPrice == null) {
-    return res.status(400).json({
-      error: 'Missing required fields',
-      received: { orderId: !!orderId, email: !!email, paymentMethod: !!paymentMethod, totalPrice },
+  // —— Rate limit: counts each POST to this endpoint (abuse / DoS protection) ——
+  const ip = getClientIp(req);
+  if (!checkRateLimit(ip)) {
+    console.error('[send-order-email] Rate limit exceeded for ip:', ip);
+    return res.status(429).json({
+      error: 'Too many orders. Please try again in an hour.',
     });
   }
 
-  const paymentInfo = PAYMENT_INFO[paymentMethod as keyof typeof PAYMENT_INFO];
-  if (!paymentInfo) {
-    return res.status(400).json({ error: `Unknown payment method: ${paymentMethod}` });
+  const body = req.body;
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
   }
 
-  const resend = new Resend(RESEND_API_KEY);
-  const orderShortId = (orderId as string).slice(0, 8);
+  const record = body as Record<string, unknown>;
+  const bodyKeys = Object.keys(record);
+  if (bodyKeys.some((k) => !ALLOWED_BODY_KEYS.has(k))) {
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
 
-  const itemRows = (items as OrderItem[] | undefined)?.map(
-    (item) =>
-      `<li style="padding:5px 0">${item.meal_name} x${item.quantity} — $${(item.price * item.quantity).toFixed(2)}</li>`
-  ).join('') ?? '';
+  const { orderId, email, paymentMethod, totalPrice, items, csrfToken } = record;
+
+  // —— CSRF token: format-only check (basic defense; production = signed tokens) ——
+  if (typeof csrfToken !== 'string' || !UUID_V4_REGEX.test(csrfToken)) {
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
+
+  if (orderId == null || typeof orderId !== 'string' || !UUID_GENERIC_REGEX.test(orderId)) {
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
+
+  if (email == null || typeof email !== 'string' || email.trim() === '') {
+    return res.status(400).json({ error: 'Please enter your email address.' });
+  }
+  const emailTrim = email.trim();
+  if (!EMAIL_REGEX.test(emailTrim) || emailTrim.length > 320) {
+    return res.status(400).json({ error: 'Please enter a valid email address.' });
+  }
+
+  if (paymentMethod !== 'zelle' && paymentMethod !== 'venmo') {
+    return res.status(400).json({
+      error: 'Invalid payment method. Use Zelle or Venmo.',
+    });
+  }
+
+  if (typeof totalPrice !== 'number' || !Number.isFinite(totalPrice)) {
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
+
+  const parsedItems = validateItems(items);
+  if (!parsedItems.ok) {
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
+
+  const validatedItems = parsedItems.items;
+
+  // —— Server-side price integrity (prevent tampered totals) ——
+  const computedTotal = validatedItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
+  if (Math.abs(computedTotal - totalPrice) > 0.01) {
+    console.error('[send-order-email] Price mismatch — possible fraud', {
+      submitted: totalPrice,
+      computed: computedTotal,
+      orderId: orderId.slice(0, 8),
+    });
+    return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
+
+  const paymentInfo = PAYMENT_INFO[paymentMethod];
+  const resend = new Resend(RESEND_API_KEY);
+
+  const orderShortId = orderId.slice(0, 8);
+
+  const itemRows = validatedItems.map(
+    (item: OrderItem) =>
+      `<li style="padding:5px 0">${escapeHtml(item.meal_name)} x${item.quantity} — $${(item.price * item.quantity).toFixed(2)}</li>`
+  ).join('');
 
   const itemsHtml = itemRows
     ? `<h3>Items Ordered:</h3><ul style="list-style:none;padding-left:0">${itemRows}</ul>`
     : '';
+
+  const safeTotal = totalPrice.toFixed(2);
+  const safeEmailHtml = escapeHtml(emailTrim);
+  const pmLabel = paymentMethod === 'zelle' ? 'Zelle' : 'Venmo';
 
   const customerHtml = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
@@ -56,16 +228,16 @@ export default async function handler(req: any, res: any) {
       <p>Thank you for your order!</p>
       <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0">
         <h2 style="margin-top:0">Order Details</h2>
-        <p><strong>Order ID:</strong> #${orderShortId}</p>
-        <p><strong>Total:</strong> $${(totalPrice as number).toFixed(2)}</p>
-        <p><strong>Payment Method:</strong> ${paymentMethod === 'zelle' ? 'Zelle' : 'Venmo'}</p>
+        <p><strong>Order ID:</strong> #${escapeHtml(orderShortId)}</p>
+        <p><strong>Total:</strong> $${safeTotal}</p>
+        <p><strong>Payment Method:</strong> ${pmLabel}</p>
         ${itemsHtml}
       </div>
       <div style="background:#fef3c7;padding:20px;border-radius:8px;border-left:4px solid #f59e0b;margin:20px 0">
         <h2 style="margin-top:0">Payment Instructions</h2>
-        <p>Please send <strong>$${(totalPrice as number).toFixed(2)}</strong> to:</p>
-        <p><strong>${paymentInfo.label}:</strong> ${paymentInfo.contact}</p>
-        <p style="color:#f59e0b"><strong>IMPORTANT:</strong> Include order #${orderShortId} in your payment note.</p>
+        <p>Please send <strong>$${safeTotal}</strong> to:</p>
+        <p><strong>${paymentInfo.label}:</strong> ${escapeHtml(paymentInfo.contact)}</p>
+        <p style="color:#f59e0b"><strong>IMPORTANT:</strong> Include order #${escapeHtml(orderShortId)} in your payment note.</p>
       </div>
       <p>We'll confirm your order once we verify your payment.</p>
       <p>Best regards,<br/>The Bloo Team</p>
@@ -77,65 +249,76 @@ export default async function handler(req: any, res: any) {
       <h1 style="color:#2563eb">New Order Received</h1>
       <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0">
         <h2 style="margin-top:0">Order Details</h2>
-        <p><strong>Order ID:</strong> ${orderId}</p>
-        <p><strong>Customer Email:</strong> ${email}</p>
-        <p><strong>Total:</strong> $${(totalPrice as number).toFixed(2)}</p>
-        <p><strong>Payment Method:</strong> ${paymentMethod === 'zelle' ? 'Zelle' : 'Venmo'}</p>
+        <p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>
+        <p><strong>Customer Email:</strong> ${safeEmailHtml}</p>
+        <p><strong>Total:</strong> $${safeTotal}</p>
+        <p><strong>Payment Method:</strong> ${pmLabel}</p>
         ${itemsHtml}
       </div>
       <div style="background:#dbeafe;padding:20px;border-radius:8px;margin:20px 0">
         <h3 style="margin-top:0">Expected Payment</h3>
-        <p><strong>${paymentInfo.label}:</strong> ${paymentInfo.contact}</p>
-        <p><strong>Amount:</strong> $${(totalPrice as number).toFixed(2)}</p>
+        <p><strong>${paymentInfo.label}:</strong> ${escapeHtml(paymentInfo.contact)}</p>
+        <p><strong>Amount:</strong> $${safeTotal}</p>
       </div>
       <p>Please verify the payment and update the order status in the admin panel.</p>
     </div>
   `;
 
-  console.log(`[send-order-email] order=${orderShortId} to_customer=${email} to_admin=${ADMIN_EMAIL}`);
+  console.log(`[send-order-email] order=${orderShortId} to_customer=${emailTrim} to_admin=${ADMIN_EMAIL}`);
 
-  // Send separately — Resend SDK returns { data, error } and never throws on API errors,
-  // so Promise.all would hide which call failed.
-  console.log('[send-order-email] Attempting customer email to:', email, 'from: onboarding@resend.dev');
-  const customerResult = await resend.emails.send({
-    from: 'onboarding@resend.dev',
-    to: email as string,
-    subject: 'Order Confirmation — Bloo',
-    html: customerHtml,
-  });
-  if (customerResult.error) {
-    console.error('[send-order-email] Customer email FAILED:', JSON.stringify(customerResult.error));
-  } else {
-    console.log('[send-order-email] Customer email OK, id:', customerResult.data?.id);
-  }
+  let customerResult: Awaited<ReturnType<Resend['emails']['send']>>;
+  let adminResult: Awaited<ReturnType<Resend['emails']['send']>>;
 
-  console.log('[send-order-email] Attempting admin email to:', ADMIN_EMAIL, 'from: onboarding@resend.dev');
-  const adminResult = await resend.emails.send({
-    from: 'onboarding@resend.dev',
-    to: ADMIN_EMAIL,
-    subject: `New Order — #${orderShortId}`,
-    html: adminHtml,
-  });
-  if (adminResult.error) {
-    console.error('[send-order-email] Admin email FAILED:', JSON.stringify(adminResult.error));
-  } else {
-    console.log('[send-order-email] Admin email OK, id:', adminResult.data?.id);
+  try {
+    console.log('[send-order-email] Attempting customer email to:', emailTrim, 'from: onboarding@resend.dev');
+    customerResult = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: emailTrim,
+      subject: 'Order Confirmation — Bloo',
+      html: customerHtml,
+    });
+    if (customerResult.error) {
+      console.error('[send-order-email] Customer email FAILED:', JSON.stringify(customerResult.error));
+    } else {
+      console.log('[send-order-email] Customer email OK, id:', customerResult.data?.id);
+    }
+
+    console.log('[send-order-email] Attempting admin email to:', ADMIN_EMAIL, 'from: onboarding@resend.dev');
+    adminResult = await resend.emails.send({
+      from: 'onboarding@resend.dev',
+      to: ADMIN_EMAIL,
+      subject: `New Order — #${orderShortId}`,
+      html: adminHtml,
+    });
+    if (adminResult.error) {
+      console.error('[send-order-email] Admin email FAILED:', JSON.stringify(adminResult.error));
+    } else {
+      console.log('[send-order-email] Admin email OK, id:', adminResult.data?.id);
+    }
+  } catch (e) {
+    console.error('[send-order-email] Unexpected error during send', e);
+    return res.status(500).json({ error: GENERIC_FAILURE });
   }
 
   if (customerResult.error && adminResult.error) {
-    return res.status(500).json({
-      error: 'Failed to send both emails',
-      customerError: customerResult.error,
-      adminError: adminResult.error,
-    });
+    console.error('[send-order-email] Both email sends failed');
+    return res.status(500).json({ error: GENERIC_FAILURE });
   }
 
+  // Do not return provider error objects to the client (information disclosure).
   return res.status(200).json({
     success: true,
     orderId: orderShortId,
     customerEmailId: customerResult.data?.id ?? null,
-    customerError: customerResult.error ?? null,
     adminEmailId: adminResult.data?.id ?? null,
-    adminError: adminResult.error ?? null,
   });
+}
+
+/** Minimal HTML entity encoding for untrusted strings embedded in email HTML. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { UtensilsCrossed, ArrowLeft, Smartphone, CreditCard } from 'lucide-react';
+import {
+  validateCheckoutEmail,
+  validateCartQuantities,
+} from '../lib/checkoutValidation';
 
 export default function CheckoutPage() {
   const { items, totalPrice, loading } = useCart();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'venmo'>('zelle');
+  /** Basic CSRF token: random per checkout visit (server validates UUID shape only). */
+  const [csrfToken] = useState(() => crypto.randomUUID());
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && items.length === 0) {
@@ -15,10 +22,34 @@ export default function CheckoutPage() {
     }
   }, [loading, items.length, navigate]);
 
+  const quantityError = useMemo(
+    () => validateCartQuantities(items.map((i) => i.quantity)),
+    [items]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    const emailErr = validateCheckoutEmail(email);
+    if (emailErr) {
+      setFormError(emailErr);
+      return;
+    }
+
+    const qtyErr = validateCartQuantities(items.map((i) => i.quantity));
+    if (qtyErr) {
+      setFormError(qtyErr);
+      return;
+    }
+
+    if (paymentMethod !== 'zelle' && paymentMethod !== 'venmo') {
+      setFormError('Please choose Zelle or Venmo.');
+      return;
+    }
+
     navigate('/payment-instructions', {
-      state: { email, paymentMethod, totalPrice, items },
+      state: { email: email.trim(), paymentMethod, totalPrice, items, csrfToken },
     });
   };
 
@@ -90,7 +121,10 @@ export default function CheckoutPage() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setFormError(null);
+                    }}
                     required
                     className="w-full px-4 py-3 bg-surface border border-line rounded-xl text-ink placeholder:text-ink-faint text-sm outline-none focus:border-primary/60 transition-colors"
                     placeholder="your@email.com"
@@ -100,6 +134,15 @@ export default function CheckoutPage() {
                   </p>
                 </div>
               </div>
+
+              {(formError || quantityError) && (
+                <div
+                  role="alert"
+                  className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-700 text-sm font-medium"
+                >
+                  {formError ?? quantityError}
+                </div>
+              )}
 
               <div className="bg-card rounded-xl border border-line p-6 shadow-sm">
                 <h3 className="text-sm font-bold text-ink font-sans font-semibold mb-4 uppercase tracking-wider">
@@ -120,7 +163,10 @@ export default function CheckoutPage() {
                         name="payment"
                         value={id}
                         checked={paymentMethod === id}
-                        onChange={() => setPaymentMethod(id)}
+                        onChange={() => {
+                          setPaymentMethod(id);
+                          setFormError(null);
+                        }}
                         className="sr-only"
                       />
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${

@@ -27,11 +27,18 @@ export default function PaymentInstructionsPage() {
   const [sendingEmails, setSendingEmails] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 
-  const { email, paymentMethod, totalPrice, items } = location.state || {};
+  const { email, paymentMethod, totalPrice, items, csrfToken } = location.state || {};
 
   useEffect(() => {
-    if (!email || !paymentMethod || totalPrice == null || !items) {
-      navigate('/cart');
+    if (
+      !email ||
+      !paymentMethod ||
+      totalPrice == null ||
+      !items ||
+      typeof csrfToken !== 'string' ||
+      csrfToken.length === 0
+    ) {
+      navigate('/checkout');
       return;
     }
 
@@ -70,7 +77,7 @@ export default function PaymentInstructionsPage() {
     };
 
     createOrder();
-  }, [email, paymentMethod, totalPrice, items, navigate]);
+  }, [email, paymentMethod, totalPrice, items, csrfToken, navigate]);
 
   if (loading || !orderId) {
     return (
@@ -105,6 +112,7 @@ export default function PaymentInstructionsPage() {
         paymentMethod,
         totalPrice,
         items: orderItems,
+        csrfToken,
       });
 
       setConfirmed(true);

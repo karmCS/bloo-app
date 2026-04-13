@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, Meal } from '../lib/supabase';
+import { supabase, Meal, getOrCreateCartSessionId } from '../lib/supabase';
 
 interface CartItemWithMeal {
   id: string;
@@ -20,19 +20,10 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-function getSessionId(): string {
-  let sessionId = localStorage.getItem('cart_session_id');
-  if (!sessionId) {
-    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('cart_session_id', sessionId);
-  }
-  return sessionId;
-}
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItemWithMeal[]>([]);
   const [loading, setLoading] = useState(true);
-  const sessionId = getSessionId();
+  const sessionId = getOrCreateCartSessionId();
 
   const fetchCartItems = async () => {
     try {

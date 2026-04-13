@@ -18,7 +18,45 @@ if (!supabaseAnonKey) {
   throw new Error('[Bloo] Missing environment variable: VITE_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/** Must match cart_items RLS (`request.headers` → `x-cart-session-id`). */
+const CART_SESSION_HEADER = 'x-cart-session-id';
+
+export function getOrCreateCartSessionId(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  let sessionId = localStorage.getItem('cart_session_id');
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('cart_session_id', sessionId);
+  }
+  return sessionId;
+}
+
+/**
+ * Per-request global headers. supabase-js only reads `global.headers` once at
+ * `createClient` time, so this factory is invoked from `global.fetch` on every
+ * request (you cannot pass a function as `global.headers` safely).
+ */
+function globalHeaders(): Record<string, string> {
+  const sid = getOrCreateCartSessionId();
+  return sid ? { [CART_SESSION_HEADER]: sid } : {};
+}
+
+const supabaseFetch: typeof fetch = (input, init) => {
+  const headers = new Headers(init?.headers);
+  for (const [key, value] of Object.entries(globalHeaders())) {
+    headers.set(key, value);
+  }
+  return fetch(input, { ...init, headers });
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    headers: {},
+    fetch: supabaseFetch,
+  },
+});
 
 export interface Meal {
   id: string;

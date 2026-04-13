@@ -10,6 +10,8 @@ interface SendOrderEmailsParams {
   paymentMethod: 'zelle' | 'venmo';
   totalPrice: number;
   items: OrderItem[];
+  /** Must match checkout-generated UUID; validated server-side (basic CSRF). */
+  csrfToken: string;
 }
 
 export async function sendOrderEmails({
@@ -18,17 +20,35 @@ export async function sendOrderEmails({
   paymentMethod,
   totalPrice,
   items,
+  csrfToken,
 }: SendOrderEmailsParams) {
   const response = await fetch('/api/send-order-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ orderId, email, paymentMethod, totalPrice, items }),
+    body: JSON.stringify({
+      orderId,
+      email,
+      paymentMethod,
+      totalPrice,
+      items,
+      csrfToken,
+    }),
   });
 
-  const body = await response.json();
+  let body: { error?: string } = {};
+  try {
+    body = await response.json();
+  } catch {
+    /* non-JSON error body — don’t leak details to UI */
+  }
 
   if (!response.ok) {
-    throw new Error(body.error || `Email API returned ${response.status}`);
+    if (response.status === 500) {
+      throw new Error('Order processing failed. Please try again.');
+    }
+    throw new Error(
+      body.error ?? 'Order processing failed. Please try again.'
+    );
   }
 
   return body;

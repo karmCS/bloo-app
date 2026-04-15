@@ -5,7 +5,7 @@ import { useActiveVendors } from '../hooks/useActiveVendors';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
-import { UtensilsCrossed, ShoppingCart, Home, LogIn } from 'lucide-react';
+import { UtensilsCrossed, ShoppingCart, Home, LogIn, Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 
@@ -16,6 +16,7 @@ export default function Homepage() {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const filteredMeals = useMemo(() => {
     if (!selectedVendorId) return meals;
@@ -34,7 +35,8 @@ export default function Homepage() {
 
   return (
     <div className="flex min-h-screen bg-page font-sans">
-      <aside className="fixed top-0 left-0 h-full w-16 bg-card flex flex-col items-center py-4 z-30 border-r border-line shadow-sm">
+      {/* Desktop sidebar */}
+      <aside className="hidden sm:flex fixed top-0 left-0 h-full w-16 bg-card flex-col items-center py-4 z-30 border-r border-line shadow-sm">
         <div className="mb-6 flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
           <UtensilsCrossed className="text-primary" size={20} />
         </div>
@@ -95,14 +97,99 @@ export default function Homepage() {
         </div>
       </aside>
 
-      <div className="flex-1 ml-16 flex flex-col min-h-screen">
+      {/* Mobile sidebar overlay */}
+      {mobileNavOpen && (
+        <div className="sm:hidden fixed inset-0 z-40">
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <div className="absolute top-0 left-0 h-full w-72 bg-card border-r border-line shadow-xl p-4 flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <UtensilsCrossed className="text-primary" size={20} />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-ink font-brand leading-none">bloo</div>
+                  <div className="text-[11px] text-ink-muted font-medium mt-0.5">Menu</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="p-2 rounded-xl border border-line bg-card hover:bg-surface transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} className="text-ink" />
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-2">
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-primary text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]"
+              >
+                <Home size={18} />
+                <span className="text-sm font-semibold">Home</span>
+              </button>
+
+              <Link
+                to="/cart"
+                onClick={() => setMobileNavOpen(false)}
+                className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl border border-line bg-card hover:bg-surface transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <ShoppingCart size={18} className="text-ink-muted" />
+                  <span className="text-sm font-semibold text-ink">Cart</span>
+                </div>
+                {totalItems > 0 && (
+                  <span className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+
+              <Link
+                to="/login"
+                onClick={() => setMobileNavOpen(false)}
+                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl border border-line bg-card hover:bg-surface transition-colors"
+              >
+                <LogIn size={18} className="text-ink-muted" />
+                <span className="text-sm font-semibold text-ink">Admin login</span>
+              </Link>
+            </div>
+
+            <div className="mt-auto pt-4 border-t border-line">
+              <p className="text-xs text-ink-muted font-medium">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 ml-0 sm:ml-16 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b border-line px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between gap-6">
-            <div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="sm:hidden w-10 h-10 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center"
+                aria-label="Open menu"
+                onClick={() => setMobileNavOpen(true)}
+              >
+                <Menu size={18} className="text-ink" />
+              </button>
+              <div>
               <h1 className="text-xl font-bold text-ink font-brand tracking-wide leading-none">bloo</h1>
               <p className="text-ink-muted text-xs mt-0.5 font-medium">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
               </p>
+              </div>
             </div>
 
             <Link

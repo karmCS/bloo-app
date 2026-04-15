@@ -21,12 +21,17 @@ const ALLOWED_BODY_KEYS = new Set([
 const ITEM_KEYS = new Set(['meal_name', 'price', 'quantity']);
 
 // —— Rate limiting (in-memory, per serverless instance — see comment below) ——
-const MAX_ORDERS_PER_IP_PER_HOUR = 5;
+/** Primary: checkout email — avoids one NAT / missing IP blocking the whole app (`unknown`). */
+const MAX_SENDS_PER_EMAIL_PER_HOUR = 15;
+/** Secondary: real client IP when we have it (shared Wi‑Fi gets a higher cap than old global5). */
+const MAX_SENDS_PER_KNOWN_IP_PER_HOUR = 60;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 
-/** IP → timestamps of successful rate-limit checks (request times). */
-const rateLimitBuckets = new Map<string, number[]>();
+type RateHit = { t: number; orderId: string };
+
+/** Bucket key → recent sends (orderId dedupes retries for the same order). */
+const rateLimitBuckets = new Map<string, RateHit[]>();
 
 /**
  * On Vercel, each function instance has its own memory; limits apply per warm
@@ -34,30 +39,78 @@ const rateLimitBuckets = new Map<string, number[]>();
  */
 setInterval(() => {
   const cutoff = Date.now() - RATE_WINDOW_MS;
-  for (const [ip, times] of rateLimitBuckets.entries()) {
-    const kept = times.filter((t) => t > cutoff);
-    if (kept.length === 0) rateLimitBuckets.delete(ip);
-    else rateLimitBuckets.set(ip, kept);
+  for (const [key, hits] of rateLimitBuckets.entries()) {
+    const kept = hits.filter((h) => h.t > cutoff);
+    if (kept.length === 0) rateLimitBuckets.delete(key);
+    else rateLimitBuckets.set(key, kept);
   }
 }, CLEANUP_INTERVAL_MS);
 
-function getClientIp(req: { headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
-  const xff = req.headers?.['x-forwarded-for'];
-  const first = Array.isArray(xff) ? xff[0] : xff?.split(',')[0]?.trim();
-  return first || req.socket?.remoteAddress || 'unknown';
+function getHeader(
+  req: { headers?: Record<string, string | string[] | undefined> },
+  name: string,
+): string | undefined {
+  const h = req.headers;
+  if (!h) return undefined;
+  const v = h[name] ?? h[name.toLowerCase()];
+  if (Array.isArray(v)) return v[0]?.trim();
+  return typeof v === 'string' ? v.trim() : undefined;
 }
 
-function checkRateLimit(ip: string): boolean {
+function getClientIp(req: { headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
+  const xff = getHeader(req, 'x-forwarded-for');
+  const firstXff = xff?.split(',')[0]?.trim();
+  const xRealIp = getHeader(req, 'x-real-ip');
+  const cfConnecting = getHeader(req, 'cf-connecting-ip');
+  const fromSocket = req.socket?.remoteAddress?.trim();
+  const ip = firstXff || xRealIp || cfConnecting || fromSocket || '';
+  return ip.length > 0 ? ip : 'unknown';
+}
+
+function pruneHits(hits: RateHit[], windowStart: number): RateHit[] {
+  return hits.filter((h) => h.t > windowStart);
+}
+
+/**
+ * Allows the request if under per-email and (when IP is known) per-IP caps.
+ * Same `orderId` in the window does not consume extra slots (double-submit / retry).
+ */
+function tryConsumeRateLimit(emailNorm: string, ip: string, orderId: string): boolean {
   const now = Date.now();
   const windowStart = now - RATE_WINDOW_MS;
-  let times = rateLimitBuckets.get(ip) ?? [];
-  times = times.filter((t) => t > windowStart);
-  if (times.length >= MAX_ORDERS_PER_IP_PER_HOUR) {
-    rateLimitBuckets.set(ip, times);
+  const hit: RateHit = { t: now, orderId };
+
+  const emailKey = `e:${emailNorm}`;
+  let emailHits = pruneHits(rateLimitBuckets.get(emailKey) ?? [], windowStart);
+  /** Same order (e.g. double-submit): do not consume another slot or re-check IP. */
+  if (emailHits.some((h) => h.orderId === orderId)) {
+    rateLimitBuckets.set(emailKey, emailHits);
+    return true;
+  }
+  if (emailHits.length >= MAX_SENDS_PER_EMAIL_PER_HOUR) {
+    rateLimitBuckets.set(emailKey, emailHits);
     return false;
   }
-  times.push(now);
-  rateLimitBuckets.set(ip, times);
+  emailHits.push(hit);
+  rateLimitBuckets.set(emailKey, emailHits);
+
+  if (ip === 'unknown') {
+    return true;
+  }
+
+  const ipKey = `i:${ip}`;
+  let ipHits = pruneHits(rateLimitBuckets.get(ipKey) ?? [], windowStart);
+  if (ipHits.some((h) => h.orderId === orderId)) {
+    rateLimitBuckets.set(ipKey, ipHits);
+    return true;
+  }
+  if (ipHits.length >= MAX_SENDS_PER_KNOWN_IP_PER_HOUR) {
+    emailHits = emailHits.filter((h) => h.orderId !== orderId);
+    rateLimitBuckets.set(emailKey, emailHits);
+    return false;
+  }
+  ipHits.push(hit);
+  rateLimitBuckets.set(ipKey, ipHits);
   return true;
 }
 
@@ -137,15 +190,6 @@ export default async function handler(req: { method?: string; headers?: Record<s
     return res.status(500).json({ error: GENERIC_FAILURE });
   }
 
-  // —— Rate limit: counts each POST to this endpoint (abuse / DoS protection) ——
-  const ip = getClientIp(req);
-  if (!checkRateLimit(ip)) {
-    console.error('[send-order-email] Rate limit exceeded for ip:', ip);
-    return res.status(429).json({
-      error: 'Too many orders. Please try again in an hour.',
-    });
-  }
-
   const body = req.body;
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({ error: INVALID_ORDER_DATA });
@@ -202,6 +246,20 @@ export default async function handler(req: { method?: string; headers?: Record<s
       orderId: orderId.slice(0, 8),
     });
     return res.status(400).json({ error: INVALID_ORDER_DATA });
+  }
+
+  // —— Rate limit: per checkout email (+ per IP when known), after validation ——
+  const emailNorm = emailTrim.toLowerCase();
+  const clientIp = getClientIp(req);
+  if (!tryConsumeRateLimit(emailNorm, clientIp, orderId)) {
+    console.error('[send-order-email] Rate limit exceeded', {
+      email: emailNorm,
+      ip: clientIp,
+      orderId: orderId.slice(0, 8),
+    });
+    return res.status(429).json({
+      error: 'Too many order requests. Please try again in an hour.',
+    });
   }
 
   const paymentInfo = PAYMENT_INFO[paymentMethod];

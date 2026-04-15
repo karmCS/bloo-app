@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#4A90E2',
-        'primary-hover': '#6BA3E8',
-        'primary-active': '#3A7BC8',
+        primary: '#2563eb',
+        'primary-hover': '#1d4ed8',
+        'primary-active': '#1e40af',
         secondary: '#3B82F6',
         accent: '#22D3EE',
         background: '#FAF9F5',
@@ -20,12 +20,10 @@ export default {
         'ink-faint': '#737373',
       },
       fontFamily: {
-        // Satoshi: UI (default via sans) — weights 400–700 from Fontshare (index.html)
-        sans: ['Satoshi', 'system-ui', 'sans-serif'],
-        // Josefin Sans: "bloo" logo only
+        sans: ['Inter', 'system-ui', 'sans-serif'],
         brand: ['"Josefin Sans"', 'sans-serif'],
-        // Fraunces: meal names / dish titles only
-        meal: ['Fraunces', 'serif'],
+        body: ['"DM Sans"', 'sans-serif'],
+        label: ['Jost', 'sans-serif'],
       },
     },
   },

@@ -268,7 +268,7 @@ export default function PaymentInstructionsPage() {
               type="button"
               onClick={handleConfirm}
               disabled={sendingEmails}
-              className="w-full py-4 bg-primary hover:bg-primary-hover active:bg-primary-active disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(74,144,226,0.3)] text-sm"
+              className="w-full py-4 bg-primary hover:bg-primary-hover active:bg-primary-active disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.3)] text-sm"
             >
               {sendingEmails ? (
                 <span className="flex items-center justify-center gap-2">

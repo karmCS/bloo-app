@@ -26,7 +26,7 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
 
   return (
     <div
-      className="bg-card rounded-2xl overflow-hidden cursor-pointer group border border-line/80 hover:border-primary/35 transition-all duration-300 hover:shadow-[0px_8px_24px_rgba(74,144,226,0.12)] flex flex-col shadow-sm"
+      className="bg-card rounded-2xl overflow-hidden cursor-pointer group border border-line/80 hover:border-primary/35 transition-all duration-300 hover:shadow-[0px_8px_24px_rgba(37,99,235,0.12)] flex flex-col shadow-sm"
       onClick={onClick}
     >
       <div className="relative overflow-hidden" style={{ height: '160px' }}>
@@ -44,7 +44,7 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
       </div>
 
       <div className="p-4 flex-1 flex flex-col">
-        <h3 className="text-sm font-semibold text-ink mb-0.5 font-meal group-hover:text-primary transition-colors duration-200 line-clamp-2 leading-snug">
+        <h3 className="text-sm font-semibold text-ink mb-0.5 font-sans group-hover:text-primary transition-colors duration-200 line-clamp-2 leading-snug">
           {meal.name}
         </h3>
         <p className="text-ink-muted text-xs font-sans font-normal mb-3">
@@ -94,7 +94,7 @@ export default function MealCard({ meal, onClick }: MealCardProps) {
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
               adding
                 ? 'bg-green-600/15 text-green-700 border border-green-600/25'
-                : 'bg-primary hover:bg-primary-hover active:bg-primary-active text-white shadow-[0px_4px_12px_rgba(74,144,226,0.3)]'
+                : 'bg-primary hover:bg-primary-hover active:bg-primary-active text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]'
             }`}
           >
             <ShoppingCart size={14} />

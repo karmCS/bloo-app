@@ -454,7 +454,7 @@ export default function VendorPanel() {
                             alt={meal.name}
                             className="w-16 h-16 rounded-lg object-cover mr-4 border border-gray-200"
                           />
-                          <div className="text-base font-bold text-gray-900 font-meal">{meal.name}</div>
+                          <div className="text-base font-bold text-gray-900 font-sans">{meal.name}</div>
                         </div>
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-900 font-semibold">

@@ -52,7 +52,7 @@ export default function CartPage() {
             <p className="text-ink-muted text-sm mb-6 font-normal">Add some delicious meals to get started</p>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(74,144,226,0.3)]"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.3)]"
             >
               Browse Meals
             </Link>
@@ -74,7 +74,7 @@ export default function CartPage() {
                     <div className="flex-1">
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="text-sm font-bold text-ink font-meal mb-0.5">
+                          <h3 className="text-sm font-bold text-ink font-sans mb-0.5">
                             {item.meal.name}
                           </h3>
                           <p className="text-ink-muted text-xs font-sans font-normal">
@@ -104,7 +104,7 @@ export default function CartPage() {
                           </span>
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-7 h-7 flex items-center justify-center bg-primary hover:bg-primary-hover rounded-lg text-white transition-colors shadow-[0px_2px_8px_rgba(74,144,226,0.3)]"
+                            className="w-7 h-7 flex items-center justify-center bg-primary hover:bg-primary-hover rounded-lg text-white transition-colors shadow-[0px_2px_8px_rgba(37,99,235,0.3)]"
                             aria-label="Increase quantity"
                           >
                             <Plus size={12} />
@@ -151,7 +151,7 @@ export default function CartPage() {
 
                 <button
                   onClick={() => navigate('/checkout')}
-                  className="w-full py-3.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(74,144,226,0.3)] text-sm"
+                  className="w-full py-3.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.3)] text-sm"
                 >
                   Continue to Payment
                 </button>

@@ -66,7 +66,7 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
             <div className="absolute bottom-6 left-8 right-8">
               <h2
                 id="meal-detail-title"
-                className="text-3xl font-bold text-white mb-1 font-meal leading-tight drop-shadow-md"
+                className="text-3xl font-bold text-white mb-1 font-sans leading-tight drop-shadow-md"
               >
                 {meal.name}
               </h2>
@@ -140,7 +140,7 @@ export default function MealDetailModal({ meal, isOpen, onClose }: MealDetailMod
                 className={`flex items-center gap-3 px-8 py-3.5 rounded-xl font-semibold transition-all duration-300 ${
                   adding
                     ? 'bg-green-600/15 text-green-700 border border-green-600/25'
-                    : 'bg-primary hover:bg-primary-hover active:bg-primary-active text-white shadow-[0px_4px_12px_rgba(74,144,226,0.35)]'
+                    : 'bg-primary hover:bg-primary-hover active:bg-primary-active text-white shadow-[0px_4px_12px_rgba(37,99,235,0.35)]'
                 }`}
               >
                 <ShoppingCart size={20} />

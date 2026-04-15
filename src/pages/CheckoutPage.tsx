@@ -192,7 +192,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(74,144,226,0.3)] text-sm"
+                className="w-full py-3.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.3)] text-sm"
               >
                 Continue to Payment
               </button>
@@ -214,7 +214,7 @@ export default function CheckoutPage() {
                       className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-ink truncate font-meal">{item.meal.name}</div>
+                      <div className="text-xs font-semibold text-ink truncate font-sans">{item.meal.name}</div>
                       <div className="text-ink-muted text-[10px] font-normal">Qty: {item.quantity}</div>
                     </div>
                     <div className="text-xs font-bold text-ink flex-shrink-0">

@@ -32,7 +32,7 @@ A full-stack web app built to validate demand for a health-focused meal delivery
 | Database | Supabase (PostgreSQL + Auth + Storage) |
 | Email | Resend |
 | Hosting | Vercel (auto-deploy from GitHub) |
-| Fonts | Josefin Sans, Fraunces, Jost, DM Sans |
+| Fonts | Inter, Josefin Sans, DM Sans, Jost |
 
 ---
 

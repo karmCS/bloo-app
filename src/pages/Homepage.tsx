@@ -40,7 +40,7 @@ export default function Homepage() {
         </div>
 
         <nav className="flex flex-col items-center gap-1 flex-1">
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group bg-primary shadow-[0px_4px_12px_rgba(74,144,226,0.35)]">
+          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group bg-primary shadow-[0px_4px_12px_rgba(37,99,235,0.35)]">
             <Home size={18} className="text-white" />
             <div className="absolute left-14 bg-ink text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-line shadow-lg z-50">
               Home
@@ -107,7 +107,7 @@ export default function Homepage() {
 
             <Link
               to="/cart"
-              className="relative flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white rounded-xl transition-all duration-200 text-sm font-semibold shadow-[0px_4px_12px_rgba(74,144,226,0.3)] shrink-0"
+              className="relative flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white rounded-xl transition-all duration-200 text-sm font-semibold shadow-[0px_4px_12px_rgba(37,99,235,0.3)] shrink-0"
             >
               <ShoppingCart size={16} />
               <span>Cart</span>
@@ -156,7 +156,7 @@ export default function Homepage() {
                           </span>
                         ))}
                       </div>
-                      <h2 className="text-3xl font-bold text-white mb-1 font-meal leading-tight drop-shadow-md">
+                      <h2 className="text-3xl font-bold text-white mb-1 font-sans leading-tight drop-shadow-md">
                         {filteredMeals[0].name}
                       </h2>
                       <p className="text-white/90 text-sm mb-4 font-sans font-normal">by {filteredMeals[0].vendor}</p>
@@ -164,7 +164,7 @@ export default function Homepage() {
                         <span className="text-2xl font-bold text-white">${filteredMeals[0].price.toFixed(2)}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleMealClick(filteredMeals[0]); }}
-                          className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(74,144,226,0.35)]"
+                          className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.35)]"
                         >
                           View Details
                         </button>
@@ -186,7 +186,7 @@ export default function Homepage() {
                     onClick={() => setSelectedVendorId(null)}
                     className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
                       selectedVendorId === null
-                        ? 'bg-primary text-white shadow-[0px_4px_12px_rgba(74,144,226,0.3)]'
+                        ? 'bg-primary text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]'
                         : 'bg-card text-ink-muted hover:text-ink border border-line shadow-sm'
                     }`}
                   >
@@ -208,7 +208,7 @@ export default function Homepage() {
                           onClick={() => setSelectedVendorId(v.id)}
                           className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                             active
-                              ? 'bg-primary text-white shadow-[0px_4px_12px_rgba(74,144,226,0.3)]'
+                              ? 'bg-primary text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]'
                               : 'bg-card text-ink-muted hover:text-ink border border-line shadow-sm'
                           }`}
                         >

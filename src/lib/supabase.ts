@@ -113,7 +113,7 @@ export interface Order {
   user_email: string;
   items: OrderItem[];
   total_price: number;
-  payment_method: 'zelle' | 'venmo';
+  payment_method: 'zelle' | 'venmo' | 'card';
   status: 'pending' | 'confirmed';
   created_at: string;
   updated_at: string;

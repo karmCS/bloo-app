@@ -8,6 +8,9 @@ const PAYMENT_INFO = {
   venmo: { contact: '@bloo-meals', label: 'Venmo Handle' },
 } as const;
 
+type PaymentMethod = keyof typeof PAYMENT_INFO | 'card';
+type PaymentStatus = 'pending' | 'paid';
+
 /** Allowed top-level JSON keys — rejects mass-assignment / unexpected fields (OWASP). */
 const ALLOWED_BODY_KEYS = new Set([
   'orderId',
@@ -180,7 +183,133 @@ interface OrderItem {
   quantity: number;
 }
 
-export default async function handler(req: { method?: string; headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string }; body?: unknown }, res: { status: (n: number) => { json: (b: object) => void } }) {
+export async function sendOrderEmails(params: {
+  orderId: string;
+  email: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  totalPrice: number;
+  items: OrderItem[];
+}) {
+  if (!RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not set in environment variables');
+  }
+
+  const { orderId, email, paymentMethod, paymentStatus, totalPrice, items } = params;
+
+  const resend = new Resend(RESEND_API_KEY);
+  const orderShortId = orderId.slice(0, 8);
+
+  const itemRows = items
+    .map(
+      (item: OrderItem) =>
+        `<li style="padding:5px 0">${escapeHtml(item.meal_name)} x${item.quantity} — $${(item.price * item.quantity).toFixed(2)}</li>`,
+    )
+    .join('');
+
+  const itemsHtml = itemRows
+    ? `<h3>Items Ordered:</h3><ul style="list-style:none;padding-left:0">${itemRows}</ul>`
+    : '';
+
+  const safeTotal = totalPrice.toFixed(2);
+  const safeEmailHtml = escapeHtml(email);
+
+  const paymentHeading =
+    paymentMethod === 'card'
+      ? paymentStatus === 'paid'
+        ? 'Payment Received'
+        : 'Payment Pending'
+      : 'Payment Instructions';
+
+  const paymentBlock =
+    paymentMethod === 'card'
+      ? `
+      <div style="background:#dcfce7;padding:20px;border-radius:8px;border-left:4px solid #22c55e;margin:20px 0">
+        <h2 style="margin-top:0">${paymentHeading}</h2>
+        <p>We’ve received your card payment of <strong>$${safeTotal}</strong>.</p>
+        <p>Your order is confirmed. We’ll follow up with delivery details shortly.</p>
+      </div>
+    `
+      : (() => {
+          const paymentInfo = PAYMENT_INFO[paymentMethod];
+          const pmLabel = paymentMethod === 'zelle' ? 'Zelle' : 'Venmo';
+          return `
+      <div style="background:#fef3c7;padding:20px;border-radius:8px;border-left:4px solid #f59e0b;margin:20px 0">
+        <h2 style="margin-top:0">${paymentHeading}</h2>
+        <p>Please send <strong>$${safeTotal}</strong> to:</p>
+        <p><strong>${escapeHtml(paymentInfo.label)}:</strong> ${escapeHtml(paymentInfo.contact)}</p>
+        <p style="color:#f59e0b"><strong>IMPORTANT:</strong> Include order #${escapeHtml(orderShortId)} in your payment note.</p>
+      </div>
+    `;
+        })();
+
+  const pmLabel =
+    paymentMethod === 'card' ? 'Card (Stripe)' : paymentMethod === 'zelle' ? 'Zelle' : 'Venmo';
+
+  const customerHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+      <h1 style="color:#2563eb">Order Confirmation — Bloo</h1>
+      <p>Thank you for your order!</p>
+      <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0">
+        <h2 style="margin-top:0">Order Details</h2>
+        <p><strong>Order ID:</strong> #${escapeHtml(orderShortId)}</p>
+        <p><strong>Total:</strong> $${safeTotal}</p>
+        <p><strong>Payment Method:</strong> ${pmLabel}</p>
+        ${itemsHtml}
+      </div>
+      ${paymentBlock}
+      <p>Best regards,<br/>The Bloo Team</p>
+    </div>
+  `;
+
+  const adminHtml = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+      <h1 style="color:#2563eb">${paymentMethod === 'card' ? 'Paid Order' : 'New Order Received'}</h1>
+      <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0">
+        <h2 style="margin-top:0">Order Details</h2>
+        <p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>
+        <p><strong>Customer Email:</strong> ${safeEmailHtml}</p>
+        <p><strong>Total:</strong> $${safeTotal}</p>
+        <p><strong>Payment Method:</strong> ${pmLabel}</p>
+        ${itemsHtml}
+      </div>
+      ${
+        paymentMethod === 'card'
+          ? `<div style="background:#dcfce7;padding:20px;border-radius:8px;margin:20px 0">
+        <h3 style="margin-top:0">Payment Status</h3>
+        <p><strong>Status:</strong> ${escapeHtml(paymentStatus)}</p>
+      </div>`
+          : ''
+      }
+    </div>
+  `;
+
+  const customerResult = await resend.emails.send({
+    from: 'onboarding@resend.dev',
+    to: email,
+    subject: 'Order Confirmation — Bloo',
+    html: customerHtml,
+  });
+
+  const adminResult = await resend.emails.send({
+    from: 'onboarding@resend.dev',
+    to: ADMIN_EMAIL,
+    subject: paymentMethod === 'card' ? `Paid Order — #${orderShortId}` : `New Order — #${orderShortId}`,
+    html: adminHtml,
+  });
+
+  return { customerResult, adminResult, orderShortId };
+}
+
+export default async function handler(
+  req: {
+    method?: string;
+    headers?: Record<string, string | string[] | undefined>;
+    socket?: { remoteAddress?: string };
+    body?: unknown;
+  },
+  res: { status: (n: number) => { json: (b: object) => void } },
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -221,9 +350,11 @@ export default async function handler(req: { method?: string; headers?: Record<s
   }
 
   if (paymentMethod !== 'zelle' && paymentMethod !== 'venmo') {
-    return res.status(400).json({
-      error: 'Invalid payment method. Use Zelle or Venmo.',
-    });
+    if (paymentMethod !== 'card') {
+      return res.status(400).json({
+        error: 'Invalid payment method. Use Card, Zelle, or Venmo.',
+      });
+    }
   }
 
   if (typeof totalPrice !== 'number' || !Number.isFinite(totalPrice)) {
@@ -262,101 +393,25 @@ export default async function handler(req: { method?: string; headers?: Record<s
     });
   }
 
-  const paymentInfo = PAYMENT_INFO[paymentMethod];
-  const resend = new Resend(RESEND_API_KEY);
-
   const orderShortId = orderId.slice(0, 8);
-
-  const itemRows = validatedItems.map(
-    (item: OrderItem) =>
-      `<li style="padding:5px 0">${escapeHtml(item.meal_name)} x${item.quantity} — $${(item.price * item.quantity).toFixed(2)}</li>`
-  ).join('');
-
-  const itemsHtml = itemRows
-    ? `<h3>Items Ordered:</h3><ul style="list-style:none;padding-left:0">${itemRows}</ul>`
-    : '';
-
-  const safeTotal = totalPrice.toFixed(2);
-  const safeEmailHtml = escapeHtml(emailTrim);
-  const pmLabel = paymentMethod === 'zelle' ? 'Zelle' : 'Venmo';
-
-  const customerHtml = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-      <h1 style="color:#2563eb">Order Confirmation — Bloo</h1>
-      <p>Thank you for your order!</p>
-      <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0">
-        <h2 style="margin-top:0">Order Details</h2>
-        <p><strong>Order ID:</strong> #${escapeHtml(orderShortId)}</p>
-        <p><strong>Total:</strong> $${safeTotal}</p>
-        <p><strong>Payment Method:</strong> ${pmLabel}</p>
-        ${itemsHtml}
-      </div>
-      <div style="background:#fef3c7;padding:20px;border-radius:8px;border-left:4px solid #f59e0b;margin:20px 0">
-        <h2 style="margin-top:0">Payment Instructions</h2>
-        <p>Please send <strong>$${safeTotal}</strong> to:</p>
-        <p><strong>${paymentInfo.label}:</strong> ${escapeHtml(paymentInfo.contact)}</p>
-        <p style="color:#f59e0b"><strong>IMPORTANT:</strong> Include order #${escapeHtml(orderShortId)} in your payment note.</p>
-      </div>
-      <p>We'll confirm your order once we verify your payment.</p>
-      <p>Best regards,<br/>The Bloo Team</p>
-    </div>
-  `;
-
-  const adminHtml = `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-      <h1 style="color:#2563eb">New Order Received</h1>
-      <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0">
-        <h2 style="margin-top:0">Order Details</h2>
-        <p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>
-        <p><strong>Customer Email:</strong> ${safeEmailHtml}</p>
-        <p><strong>Total:</strong> $${safeTotal}</p>
-        <p><strong>Payment Method:</strong> ${pmLabel}</p>
-        ${itemsHtml}
-      </div>
-      <div style="background:#dbeafe;padding:20px;border-radius:8px;margin:20px 0">
-        <h3 style="margin-top:0">Expected Payment</h3>
-        <p><strong>${paymentInfo.label}:</strong> ${escapeHtml(paymentInfo.contact)}</p>
-        <p><strong>Amount:</strong> $${safeTotal}</p>
-      </div>
-      <p>Please verify the payment and update the order status in the admin panel.</p>
-    </div>
-  `;
-
   console.log(`[send-order-email] order=${orderShortId} to_customer=${emailTrim} to_admin=${ADMIN_EMAIL}`);
 
-  let customerResult: Awaited<ReturnType<Resend['emails']['send']>>;
-  let adminResult: Awaited<ReturnType<Resend['emails']['send']>>;
-
+  let results: Awaited<ReturnType<typeof sendOrderEmails>>;
   try {
-    console.log('[send-order-email] Attempting customer email to:', emailTrim, 'from: onboarding@resend.dev');
-    customerResult = await resend.emails.send({
-      from: 'onboarding@resend.dev',
-      to: emailTrim,
-      subject: 'Order Confirmation — Bloo',
-      html: customerHtml,
+    results = await sendOrderEmails({
+      orderId,
+      email: emailTrim,
+      paymentMethod: paymentMethod as PaymentMethod,
+      paymentStatus: paymentMethod === 'card' ? 'paid' : 'pending',
+      totalPrice,
+      items: validatedItems,
     });
-    if (customerResult.error) {
-      console.error('[send-order-email] Customer email FAILED:', JSON.stringify(customerResult.error));
-    } else {
-      console.log('[send-order-email] Customer email OK, id:', customerResult.data?.id);
-    }
-
-    console.log('[send-order-email] Attempting admin email to:', ADMIN_EMAIL, 'from: onboarding@resend.dev');
-    adminResult = await resend.emails.send({
-      from: 'onboarding@resend.dev',
-      to: ADMIN_EMAIL,
-      subject: `New Order — #${orderShortId}`,
-      html: adminHtml,
-    });
-    if (adminResult.error) {
-      console.error('[send-order-email] Admin email FAILED:', JSON.stringify(adminResult.error));
-    } else {
-      console.log('[send-order-email] Admin email OK, id:', adminResult.data?.id);
-    }
   } catch (e) {
     console.error('[send-order-email] Unexpected error during send', e);
     return res.status(500).json({ error: GENERIC_FAILURE });
   }
+
+  const { customerResult, adminResult } = results;
 
   if (customerResult.error && adminResult.error) {
     console.error('[send-order-email] Both email sends failed');

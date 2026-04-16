@@ -1,20 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '../contexts/CartContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { UtensilsCrossed, ArrowLeft, Smartphone, CreditCard } from 'lucide-react';
+import { UtensilsCrossed, ArrowLeft, CreditCard } from 'lucide-react';
 import {
   validateCheckoutEmail,
   validateCartQuantities,
 } from '../lib/checkoutValidation';
+import { supabase, OrderItem } from '../lib/supabase';
 
 export default function CheckoutPage() {
   const { items, totalPrice, loading } = useCart();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'zelle' | 'venmo'>('zelle');
-  /** Basic CSRF token: random per checkout visit (server validates UUID shape only). */
-  const [csrfToken] = useState(() => crypto.randomUUID());
   const [formError, setFormError] = useState<string | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [payLoading, setPayLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && items.length === 0) {
@@ -27,9 +27,9 @@ export default function CheckoutPage() {
     [items]
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayWithCard = async () => {
     setFormError(null);
+    setStripeError(null);
 
     const emailErr = validateCheckoutEmail(email);
     if (emailErr) {
@@ -43,14 +43,88 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (paymentMethod !== 'zelle' && paymentMethod !== 'venmo') {
-      setFormError('Please choose Zelle or Venmo.');
-      return;
-    }
+    setPayLoading(true);
 
-    navigate('/payment-instructions', {
-      state: { email: email.trim(), paymentMethod, totalPrice, items, csrfToken },
-    });
+    try {
+      const orderItems: OrderItem[] = items.map((item) => ({
+        meal_id: item.meal.id,
+        meal_name: item.meal.name,
+        price: item.meal.price,
+        quantity: item.quantity,
+      }));
+
+      const { data: orderRow, error: insertError } = await supabase
+        .from('orders')
+        .insert([
+          {
+            user_email: email.trim(),
+            items: orderItems,
+            total_price: totalPrice,
+            payment_method: 'card',
+            status: 'pending',
+          },
+        ])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      const orderId = orderRow.id;
+
+      const cartItems = items.map((item) => {
+        const unitPrice = item.meal.price ?? 0;
+        const entry: {
+          name: string;
+          price: number;
+          quantity: number;
+          image?: string;
+        } = {
+          name: item.meal.name,
+          price: unitPrice,
+          quantity: item.quantity,
+        };
+        if (item.meal.image_url?.trim()) {
+          entry.image = item.meal.image_url.trim();
+        }
+        return entry;
+      });
+
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, cartItems }),
+      });
+
+      const data: unknown = await response.json().catch(() => null);
+      const url =
+        data &&
+        typeof data === 'object' &&
+        'url' in data &&
+        typeof (data as { url: unknown }).url === 'string'
+          ? (data as { url: string }).url
+          : null;
+
+      if (!response.ok) {
+        const msg =
+          data &&
+          typeof data === 'object' &&
+          'error' in data &&
+          typeof (data as { error: unknown }).error === 'string'
+            ? (data as { error: string }).error
+            : 'Could not start checkout. Please try again.';
+        throw new Error(msg);
+      }
+
+      if (!url) {
+        throw new Error('Invalid response from checkout.');
+      }
+
+      window.location.href = url;
+    } catch (err) {
+      console.error(err);
+      setStripeError(err instanceof Error ? err.message : 'Something went wrong.');
+      setPayLoading(false);
+    }
   };
 
   if (loading) {
@@ -62,21 +136,6 @@ export default function CheckoutPage() {
   }
 
   if (items.length === 0) return null;
-
-  const paymentOptions = [
-    {
-      id: 'zelle' as const,
-      label: 'Zelle',
-      description: 'Pay directly with Zelle',
-      icon: CreditCard,
-    },
-    {
-      id: 'venmo' as const,
-      label: 'Venmo',
-      description: 'Pay via Venmo',
-      icon: Smartphone,
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-page font-sans">
@@ -109,7 +168,13 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handlePayWithCard();
+              }}
+            >
               <div className="bg-card rounded-xl border border-line p-6 shadow-sm">
                 <h3 className="text-sm font-bold text-ink font-sans font-semibold mb-4 uppercase tracking-wider">
                   Contact Information
@@ -124,6 +189,7 @@ export default function CheckoutPage() {
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setFormError(null);
+                      setStripeError(null);
                     }}
                     required
                     className="w-full px-4 py-3 bg-surface border border-line rounded-xl text-ink placeholder:text-ink-faint text-sm outline-none focus:border-primary/60 transition-colors"
@@ -146,56 +212,34 @@ export default function CheckoutPage() {
 
               <div className="bg-card rounded-xl border border-line p-6 shadow-sm">
                 <h3 className="text-sm font-bold text-ink font-sans font-semibold mb-4 uppercase tracking-wider">
-                  Payment Method
+                  Payment
                 </h3>
-                <div className="space-y-3">
-                  {paymentOptions.map(({ id, label, description, icon: Icon }) => (
-                    <label
-                      key={id}
-                      className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-200 ${
-                        paymentMethod === id
-                          ? 'border-primary/60 bg-primary/10'
-                          : 'border-line bg-surface hover:border-primary/30'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={id}
-                        checked={paymentMethod === id}
-                        onChange={() => {
-                          setPaymentMethod(id);
-                          setFormError(null);
-                        }}
-                        className="sr-only"
-                      />
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        paymentMethod === id ? 'bg-primary' : 'bg-page'
-                      }`}>
-                        <Icon size={18} className={paymentMethod === id ? 'text-white' : 'text-ink-muted'} />
-                      </div>
-                      <div className="flex-1">
-                        <div className={`font-semibold text-sm ${paymentMethod === id ? 'text-ink' : 'text-ink-muted'}`}>{label}</div>
-                        <div className="text-ink-muted text-xs font-normal">{description}</div>
-                      </div>
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                        paymentMethod === id ? 'border-primary' : 'border-line'
-                      }`}>
-                        {paymentMethod === id && (
-                          <div className="w-2 h-2 rounded-full bg-primary" />
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
+                <button
+                  type="submit"
+                  disabled={payLoading}
+                  className="w-full py-3.5 bg-primary hover:bg-primary-hover active:bg-primary-active disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.3)] text-sm flex items-center justify-center gap-2 font-sans"
+                >
+                  {payLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
+                      Processing...
+                    </span>
+                  ) : (
+                    <>
+                      <CreditCard size={18} className="flex-shrink-0" />
+                      Pay with Card
+                    </>
+                  )}
+                </button>
+                {stripeError && (
+                  <p
+                    role="alert"
+                    className="mt-3 text-sm font-medium text-red-700"
+                  >
+                    {stripeError}
+                  </p>
+                )}
               </div>
-
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.3)] text-sm"
-              >
-                Continue to Payment
-              </button>
             </form>
           </div>
 

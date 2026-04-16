@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentInstructionsPage from './pages/PaymentInstructionsPage';
+import OrderConfirmationPage from './pages/OrderConfirmationPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthRedirect from './components/AuthRedirect';
 import Unauthorized from './pages/Unauthorized';
@@ -22,6 +23,7 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           <Route path="/payment-instructions" element={<PaymentInstructionsPage />} />
           <Route
             path="/admin"

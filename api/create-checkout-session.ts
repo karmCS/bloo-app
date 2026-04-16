@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin';
-import { readRawBody } from './_lib/readRawBody';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
+import { readRawBody } from './_lib/readRawBody.js';
 
 type CartItemInput = {
   name: string;

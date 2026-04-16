@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin';
-import { readRawBody } from './_lib/readRawBody';
-import { sendOrderEmails } from './send-order-email';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
+import { readRawBody } from './_lib/readRawBody.js';
+import { sendOrderEmails } from './send-order-email.js';
 
 export const config = { api: { bodyParser: false } };
 

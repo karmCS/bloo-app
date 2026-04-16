@@ -1,7 +1,12 @@
 import { Resend } from 'resend';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bloo.com';
+
+/** Staff inbox that receives order notification copies (new/paid orders). */
+const ORDER_NOTIFICATION_EMAIL =
+  process.env.ORDER_NOTIFICATION_EMAIL?.trim() ||
+  process.env.ADMIN_EMAIL?.trim() ||
+  'admin@bloo.com';
 
 const PAYMENT_INFO = {
   zelle: { contact: 'payments@bloo.com', label: 'Email/Phone' },
@@ -293,7 +298,7 @@ export async function sendOrderEmails(params: {
 
   const adminResult = await resend.emails.send({
     from: 'onboarding@resend.dev',
-    to: ADMIN_EMAIL,
+    to: ORDER_NOTIFICATION_EMAIL,
     subject: paymentMethod === 'card' ? `Paid Order — #${orderShortId}` : `New Order — #${orderShortId}`,
     html: adminHtml,
   });
@@ -394,7 +399,9 @@ export default async function handler(
   }
 
   const orderShortId = orderId.slice(0, 8);
-  console.log(`[send-order-email] order=${orderShortId} to_customer=${emailTrim} to_admin=${ADMIN_EMAIL}`);
+  console.log(
+    `[send-order-email] order=${orderShortId} to_customer=${emailTrim} to_staff=${ORDER_NOTIFICATION_EMAIL}`,
+  );
 
   let results: Awaited<ReturnType<typeof sendOrderEmails>>;
   try {

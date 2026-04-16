@@ -8,7 +8,10 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "admin@bloo.com";
+const ORDER_NOTIFICATION_EMAIL =
+  Deno.env.get("ORDER_NOTIFICATION_EMAIL")?.trim() ||
+  Deno.env.get("ADMIN_EMAIL")?.trim() ||
+  "admin@bloo.com";
 
 const PAYMENT_INFO = {
   zelle: {
@@ -149,10 +152,10 @@ Deno.serve(async (req: Request) => {
     });
     console.log("Customer email result:", JSON.stringify(customerResult));
 
-    console.log("Sending admin email to:", ADMIN_EMAIL);
+    console.log("Sending staff order notification to:", ORDER_NOTIFICATION_EMAIL);
     const adminResult = await resend.emails.send({
       from: 'Bloo Orders <orders@bloo.com>',
-      to: ADMIN_EMAIL,
+      to: ORDER_NOTIFICATION_EMAIL,
       subject: `New Order Received - #${orderShortId}`,
       html: adminEmailHtml,
     });

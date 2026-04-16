@@ -69,6 +69,8 @@ Create a `.env` file:
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_anon_key
 RESEND_API_KEY=your_resend_key
+# Staff inbox for order notification emails (optional; falls back to ADMIN_EMAIL)
+ORDER_NOTIFICATION_EMAIL=orders@yourdomain.com
 ADMIN_EMAIL=you@example.com
 ```
 

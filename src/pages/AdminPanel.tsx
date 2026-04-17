@@ -468,7 +468,7 @@ export default function AdminPanel() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/20">
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
@@ -696,7 +696,7 @@ export default function AdminPanel() {
                     className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-sans font-medium transition-colors ${
                       mealsVendorFilterId === null
                         ? 'bg-primary text-white shadow-sm'
-                        : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
+                        : 'border-2 border-primary bg-white text-primary hover:bg-primary/10'
                     }`}
                   >
                     All
@@ -711,7 +711,7 @@ export default function AdminPanel() {
                         className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-sans font-medium transition-colors whitespace-nowrap ${
                           active
                             ? 'bg-primary text-white shadow-sm'
-                            : 'border-2 border-primary bg-white text-primary hover:bg-blue-50/80'
+                            : 'border-2 border-primary bg-white text-primary hover:bg-primary/10'
                         }`}
                       >
                         {v.name}
@@ -735,7 +735,7 @@ export default function AdminPanel() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
+                    <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
                       <tr>
                         {['Meal', 'Vendor', 'Price', 'Macros', 'Actions'].map((h) => (
                           <th
@@ -749,7 +749,7 @@ export default function AdminPanel() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {filteredMeals.map((meal) => (
-                        <tr key={meal.id} className="hover:bg-blue-50/30 transition-colors">
+                        <tr key={meal.id} className="hover:bg-primary/5 transition-colors">
                           <td className="px-6 py-5 whitespace-nowrap">
                             <div className="flex items-center">
                               <img
@@ -790,7 +790,7 @@ export default function AdminPanel() {
                               <div className="flex items-center justify-end gap-3">
                                 <button
                                   onClick={() => handleEdit(meal)}
-                                  className="px-4 py-2 bg-blue-100 text-primary rounded-lg hover:bg-blue-200 transition-colors font-semibold"
+                                  className="px-4 py-2 bg-primary/15 text-primary rounded-lg hover:bg-primary/25 transition-colors font-semibold"
                                 >
                                   Edit
                                 </button>
@@ -895,7 +895,7 @@ export default function AdminPanel() {
                   </div>
                 ) : (
                   <table className="w-full">
-                    <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
+                    <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
                       <tr>
                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">Name</th>
                         <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-right">Details</th>
@@ -911,7 +911,7 @@ export default function AdminPanel() {
                           <Fragment key={member.id}>
                             <tr
                               onClick={() => setExpandedSuperadminId(isExpanded ? null : member.id)}
-                              className="hover:bg-blue-50/30 transition-colors cursor-pointer select-none"
+                              className="hover:bg-primary/5 transition-colors cursor-pointer select-none"
                             >
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
@@ -929,7 +929,7 @@ export default function AdminPanel() {
                               </td>
                             </tr>
                             {isExpanded && (
-                              <tr className="bg-blue-50/40">
+                              <tr className="bg-primary/10">
                                 <td colSpan={2} className="px-6 py-5">
                                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-sm">
                                     <div>
@@ -1072,7 +1072,7 @@ export default function AdminPanel() {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
+                      <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
                         <tr>
                           {['Name', 'Slug', 'Contact Email', 'Venmo', 'Zelle', 'Status'].map((h) => (
                             <th key={h} className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">{h}</th>
@@ -1101,7 +1101,7 @@ export default function AdminPanel() {
                                     setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
                                   }
                                 }}
-                                className="hover:bg-blue-50/30 transition-colors cursor-pointer select-none"
+                                className="hover:bg-primary/5 transition-colors cursor-pointer select-none"
                               >
                                 <td className="px-6 py-4 text-sm font-semibold text-gray-900">{vendor.name}</td>
                                 <td className="px-6 py-4 text-sm text-gray-600 font-mono">{vendor.slug}</td>
@@ -1119,7 +1119,7 @@ export default function AdminPanel() {
                               </tr>
 
                               {isExpanded && (
-                                <tr className="bg-blue-50/40">
+                                <tr className="bg-primary/10">
                                   <td colSpan={7} className="px-6 py-5">
                                     <div className="space-y-8">
                                       {isEditing ? (

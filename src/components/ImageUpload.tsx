@@ -138,7 +138,7 @@ export default function ImageUpload({
             )}
           </div>
           {fileName && (
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
               <div className="flex items-center gap-3">
                 <ImageIcon className="text-primary" size={24} />
                 <div>
@@ -158,10 +158,10 @@ export default function ImageUpload({
             relative rounded-xl border-2 border-dashed transition-all duration-300
             ${
               isDragging
-                ? 'border-primary bg-blue-50 scale-[1.02]'
+                ? 'border-primary bg-primary/10 scale-[1.02]'
                 : 'border-gray-300 bg-gray-50'
             }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-blue-50'}
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary hover:bg-primary/10'}
           `}
         >
           <input

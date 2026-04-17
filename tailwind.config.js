@@ -4,10 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#2563eb',
-        'primary-hover': '#1d4ed8',
-        'primary-active': '#1e40af',
-        secondary: '#3B82F6',
+        primary: '#7CB9E8',
+        'primary-hover': '#7CB9E8',
+        'primary-active': '#7CB9E8',
+        secondary: '#7CB9E8',
         accent: '#22D3EE',
         background: '#FAF9F5',
         text: '#111827',

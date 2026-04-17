@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
 
     const customerEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Order Confirmation - Bloo</h1>
+        <h1 style="color: #7CB9E8;">Order Confirmation - Bloo</h1>
         <p>Dear Customer,</p>
         <p>Thank you for your order with Bloo!</p>
 
@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
 
     const adminEmailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">New Order Received</h1>
+        <h1 style="color: #7CB9E8;">New Order Received</h1>
 
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2 style="margin-top: 0;">Order Details</h2>

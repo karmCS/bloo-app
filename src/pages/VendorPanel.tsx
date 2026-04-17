@@ -233,7 +233,7 @@ export default function VendorPanel() {
   // ── Loading state ─────────────────────────────────────────────────────────
   if (!pageReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/20 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
@@ -241,7 +241,7 @@ export default function VendorPanel() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/20">
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
@@ -432,7 +432,7 @@ export default function VendorPanel() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50 border-b border-gray-200">
+                <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
                   <tr>
                     {['Meal', 'Price', 'Macros', 'Actions'].map((h) => (
                       <th
@@ -446,7 +446,7 @@ export default function VendorPanel() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {meals.map((meal) => (
-                    <tr key={meal.id} className="hover:bg-blue-50/30 transition-colors">
+                    <tr key={meal.id} className="hover:bg-primary/5 transition-colors">
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="flex items-center">
                           <img
@@ -484,7 +484,7 @@ export default function VendorPanel() {
                           <div className="flex items-center justify-end gap-3">
                             <button
                               onClick={() => handleEdit(meal)}
-                              className="px-4 py-2 bg-blue-100 text-primary rounded-lg hover:bg-blue-200 transition-colors font-semibold"
+                              className="px-4 py-2 bg-primary/15 text-primary rounded-lg hover:bg-primary/25 transition-colors font-semibold"
                             >
                               Edit
                             </button>

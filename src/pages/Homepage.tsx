@@ -37,10 +37,6 @@ export default function Homepage() {
     <div className="flex min-h-screen bg-page font-sans">
       {/* Desktop sidebar */}
       <aside className="hidden sm:flex fixed top-0 left-0 h-full w-16 bg-card flex-col items-center py-4 z-30 border-r border-line shadow-sm">
-        <div className="mb-6 flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-          <UtensilsCrossed className="text-primary" size={20} />
-        </div>
-
         <nav className="flex flex-col items-center gap-1 flex-1">
           <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group bg-primary shadow-[0px_4px_12px_rgba(37,99,235,0.35)]">
             <Home size={18} className="text-white" />
@@ -79,16 +75,6 @@ export default function Homepage() {
         </nav>
 
         <div className="mt-auto flex flex-col items-center gap-2">
-          <Link to="/cart" className="relative group">
-            <div className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 hover:bg-surface ${totalItems > 0 ? 'bg-primary/10' : ''}`}>
-              <ShoppingCart size={18} className={totalItems > 0 ? 'text-primary' : 'text-ink-muted group-hover:text-ink transition-colors'} />
-            </div>
-            {totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {totalItems}
-              </span>
-            )}
-          </Link>
           <Link to="/login">
             <div className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface transition-all duration-200 group">
               <LogIn size={18} className="text-ink-muted group-hover:text-ink transition-colors" />
@@ -175,20 +161,28 @@ export default function Homepage() {
       <div className="flex-1 ml-0 sm:ml-16 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b border-line px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
-                className="sm:hidden w-10 h-10 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center"
+                className="sm:hidden w-10 h-10 shrink-0 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center"
                 aria-label="Open menu"
                 onClick={() => setMobileNavOpen(true)}
               >
                 <Menu size={18} className="text-ink" />
               </button>
-              <div>
-              <h1 className="text-xl font-bold text-ink font-brand tracking-wide leading-none">bloo</h1>
-              <p className="text-ink-muted text-xs mt-0.5 font-medium">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-card"
+                  aria-hidden
+                >
+                  <UtensilsCrossed className="text-primary" size={20} />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-xl font-bold text-ink font-brand tracking-wide leading-none">bloo</h1>
+                  <p className="text-ink-muted text-xs mt-0.5 font-medium">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
               </div>
             </div>
 

@@ -532,153 +532,156 @@ export default function AdminPanel() {
             </div>
 
             {showForm && (
-              <div className="bg-white rounded-2xl shadow-xl p-8 mb-10 border border-gray-100">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 font-sans">
+              <div className="mx-auto mb-8 max-w-5xl rounded-xl border border-gray-200/80 bg-white p-5 shadow-md sm:p-6">
+                <h3 className="mb-4 font-sans text-lg font-bold tracking-tight text-gray-900">
                   {editingMeal ? 'Edit Meal' : 'Add New Meal'}
                 </h3>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Meal Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                        placeholder="Grilled Salmon Bowl"
-                      />
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-8">
+                    <div className="space-y-4 lg:col-span-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Meal image
+                        </label>
+                        <ImageUpload
+                          onImageSelect={handleImageSelect}
+                          currentImageUrl={formData.image_url}
+                          onImageRemove={handleImageRemove}
+                          disabled={isUploading}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Meal name
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-snug text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          placeholder="Grilled Salmon Bowl"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Price (USD)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          required
+                          className="w-full max-w-[11rem] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          placeholder="12.99"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Vendor
-                      </label>
-                      <select
-                        value={formData.vendor_id}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          const name = activeVendors.find((v) => v.id === id)?.name ?? '';
-                          setFormData({ ...formData, vendor_id: id, vendor: name });
-                        }}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-white"
-                      >
-                        <option value="">— select a vendor —</option>
-                        {activeVendors.map((v) => (
-                          <option key={v.id} value={v.id}>{v.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Price ($)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                      placeholder="12.99"
-                    />
-                  </div>
+                    <div className="space-y-4 lg:col-span-8">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Vendor
+                        </label>
+                        <select
+                          value={formData.vendor_id}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            const name = activeVendors.find((v) => v.id === id)?.name ?? '';
+                            setFormData({ ...formData, vendor_id: id, vendor: name });
+                          }}
+                          required
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                        >
+                          <option value="">— select a vendor —</option>
+                          {activeVendors.map((v) => (
+                            <option key={v.id} value={v.id}>{v.name}</option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Description (Optional)
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.length <= 500) {
-                          setFormData({ ...formData, description: value });
-                        }
-                      }}
-                      rows={3}
-                      maxLength={500}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                      placeholder="Highlight what makes this meal special - ingredients, preparation style, or story..."
-                    />
-                    <div className="flex justify-end mt-1">
-                      <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-gray-500'}`}>
-                        {formData.description.length}/500
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Meal Image
-                    </label>
-                    <ImageUpload
-                      onImageSelect={handleImageSelect}
-                      currentImageUrl={formData.image_url}
-                      onImageRemove={handleImageRemove}
-                      disabled={isUploading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Nutrition Information
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
-                        <div key={field}>
-                          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-2 font-medium">
-                            {field === 'calories' ? 'Calories' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
-                          </label>
-                          <input
-                            type="number"
-                            value={formData[field]}
-                            onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                          />
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Description <span className="font-normal normal-case text-gray-400">(optional)</span>
+                        </label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value.length <= 500) {
+                              setFormData({ ...formData, description: value });
+                            }
+                          }}
+                          rows={2}
+                          maxLength={500}
+                          className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          placeholder="Highlight what makes this meal special - ingredients, preparation style, or story..."
+                        />
+                        <div className="mt-1 flex justify-end">
+                          <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-gray-500'}`}>
+                            {formData.description.length}/500
+                          </span>
                         </div>
-                      ))}
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Nutrition
+                        </label>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                          {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
+                            <div key={field}>
+                              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                                {field === 'calories' ? 'Cal' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
+                              </label>
+                              <input
+                                type="number"
+                                value={formData[field]}
+                                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                                required
+                                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm tabular-nums text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Ingredients <span className="font-normal normal-case text-gray-400">(comma-separated)</span>
+                        </label>
+                        <textarea
+                          value={formData.ingredients}
+                          onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+                          required
+                          rows={3}
+                          className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Dietary tags <span className="font-normal normal-case text-gray-400">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.dietary_tags}
+                          onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
+                          placeholder="keto, gluten-free, high-protein"
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Ingredients (comma-separated)
-                    </label>
-                    <textarea
-                      value={formData.ingredients}
-                      onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                      required
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"
-                      placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Dietary Tags (comma-separated, optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dietary_tags}
-                      onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
-                      placeholder="keto, gluten-free, high-protein"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                    />
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <Button type="submit" className="px-8 py-3" disabled={isUploading}>
+                  <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+                    <Button type="submit" className="px-5 py-2 text-sm" disabled={isUploading}>
                       {isUploading ? 'Uploading...' : editingMeal ? 'Update Meal' : 'Add Meal'}
                     </Button>
-                    <Button type="button" variant="secondary" onClick={resetForm} className="px-8 py-3" disabled={isUploading}>
+                    <Button type="button" variant="secondary" onClick={resetForm} className="px-5 py-2 text-sm" disabled={isUploading}>
                       Cancel
                     </Button>
                   </div>

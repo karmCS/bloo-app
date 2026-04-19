@@ -5,14 +5,11 @@ import { useActiveVendors } from '../hooks/useActiveVendors';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
-import { UtensilsCrossed, ShoppingCart, Home, LogIn, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useCart } from '../contexts/CartContext';
+import { UtensilsCrossed, Home, Menu, X } from 'lucide-react';
 
 export default function Homepage() {
   const { meals, loading } = useMeals();
   const { vendors: activeVendors, loading: vendorsLoading } = useActiveVendors();
-  const { totalItems } = useCart();
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
@@ -46,43 +43,7 @@ export default function Homepage() {
               Home
             </div>
           </div>
-
-          {/* Archived navigation - restore when needed */}
-          {/*
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group hover:bg-surface">
-            <Tag size={18} className="text-ink-muted group-hover:text-ink transition-colors" />
-            <div className="absolute left-14 bg-ink text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-line shadow-lg z-50">
-              Promos
-            </div>
-          </div>
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group hover:bg-surface">
-            <BarChart2 size={18} className="text-ink-muted group-hover:text-ink transition-colors" />
-            <div className="absolute left-14 bg-ink text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-line shadow-lg z-50">
-              Dashboard
-            </div>
-          </div>
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group hover:bg-surface">
-            <Bell size={18} className="text-ink-muted group-hover:text-ink transition-colors" />
-            <div className="absolute left-14 bg-ink text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-line shadow-lg z-50">
-              Notifications
-            </div>
-          </div>
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group hover:bg-surface">
-            <Settings size={18} className="text-ink-muted group-hover:text-ink transition-colors" />
-            <div className="absolute left-14 bg-ink text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-line shadow-lg z-50">
-              Settings
-            </div>
-          </div>
-          */}
         </nav>
-
-        <div className="mt-auto flex flex-col items-center gap-2">
-          <Link to="/login">
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-surface transition-all duration-200 group">
-              <LogIn size={18} className="text-ink-muted group-hover:text-ink transition-colors" />
-            </div>
-          </Link>
-        </div>
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -124,31 +85,6 @@ export default function Homepage() {
                 <Home size={18} />
                 <span className="text-sm font-semibold">Home</span>
               </button>
-
-              <Link
-                to="/cart"
-                onClick={() => setMobileNavOpen(false)}
-                className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl border border-line bg-card hover:bg-surface transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <ShoppingCart size={18} className="text-ink-muted" />
-                  <span className="text-sm font-semibold text-ink">Cart</span>
-                </div>
-                {totalItems > 0 && (
-                  <span className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
-              </Link>
-
-              <Link
-                to="/login"
-                onClick={() => setMobileNavOpen(false)}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl border border-line bg-card hover:bg-surface transition-colors"
-              >
-                <LogIn size={18} className="text-ink-muted" />
-                <span className="text-sm font-semibold text-ink">Admin login</span>
-              </Link>
             </div>
 
             <div className="mt-auto pt-4 border-t border-line">
@@ -162,44 +98,29 @@ export default function Homepage() {
 
       <div className="flex-1 ml-0 sm:ml-16 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b border-line px-6 py-4 shadow-sm">
-          <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="sm:hidden w-10 h-10 shrink-0 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center"
+              aria-label="Open menu"
+              onClick={() => setMobileNavOpen(true)}
+            >
+              <Menu size={18} className="text-ink" />
+            </button>
             <div className="flex min-w-0 items-center gap-3">
-              <button
-                type="button"
-                className="sm:hidden w-10 h-10 shrink-0 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center"
-                aria-label="Open menu"
-                onClick={() => setMobileNavOpen(true)}
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-card"
+                aria-hidden
               >
-                <Menu size={18} className="text-ink" />
-              </button>
-              <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-card"
-                  aria-hidden
-                >
-                  <UtensilsCrossed className="text-primary" size={20} />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="text-xl font-bold text-ink font-brand tracking-wide leading-none">bloo</h1>
-                  <p className="text-ink-muted text-xs mt-0.5 font-medium">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
+                <UtensilsCrossed className="text-primary" size={20} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-ink font-brand tracking-wide leading-none">bloo</h1>
+                <p className="text-ink-muted text-xs mt-0.5 font-medium">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
               </div>
             </div>
-
-            <Link
-              to="/cart"
-              className="relative flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover active:bg-primary-active text-white rounded-xl transition-all duration-200 text-sm font-semibold shadow-[0px_4px_12px_rgba(37,99,235,0.3)] shrink-0"
-            >
-              <ShoppingCart size={16} />
-              <span>Cart</span>
-              {totalItems > 0 && (
-                <span className="bg-white text-primary text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
           </div>
         </header>
 
@@ -230,13 +151,10 @@ export default function Homepage() {
                     alt={mealOfTheWeek.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   />
-                  {/* Deep dual-tone gradient: rich left, transparent right */}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/10" />
-                  {/* Subtle warm vignette at bottom */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
                   <div className="absolute inset-0 flex flex-col justify-between p-7 sm:p-9">
-                    {/* Top label */}
                     <div className="flex items-center gap-2 w-fit">
                       <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-amber-400/90 text-amber-950 backdrop-blur-sm shadow-md">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -244,7 +162,6 @@ export default function Homepage() {
                       </span>
                     </div>
 
-                    {/* Bottom content */}
                     <div className="max-w-lg">
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {mealOfTheWeek.dietary_tags.slice(0, 3).map((tag, i) => (
@@ -257,15 +174,12 @@ export default function Homepage() {
                         {mealOfTheWeek.name}
                       </h2>
                       <p className="text-white/70 text-sm mb-5 font-medium">by {mealOfTheWeek.vendor}</p>
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-white font-brand">${mealOfTheWeek.price.toFixed(2)}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleMealClick(mealOfTheWeek); }}
-                          className="px-5 py-2.5 bg-white text-ink text-sm font-bold rounded-xl hover:bg-white/90 transition-all duration-200 shadow-lg"
-                        >
-                          Order now
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMealClick(mealOfTheWeek); }}
+                        className="px-5 py-2.5 bg-white text-ink text-sm font-bold rounded-xl hover:bg-white/90 transition-all duration-200 shadow-lg"
+                      >
+                        See macros
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -297,15 +211,12 @@ export default function Homepage() {
                         {filteredMeals[0].name}
                       </h2>
                       <p className="text-white/90 text-sm mb-4 font-medium">by {filteredMeals[0].vendor}</p>
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-bold text-white">${filteredMeals[0].price.toFixed(2)}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleMealClick(filteredMeals[0]); }}
-                          className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.35)]"
-                        >
-                          View Details
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMealClick(filteredMeals[0]); }}
+                        className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.35)]"
+                      >
+                        View Details
+                      </button>
                     </div>
                   </div>
                 </div>

@@ -1,13 +1,12 @@
-import { Fragment, useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useClerk, useUser, useSession } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { useMeals } from '../hooks/useMeals';
+import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
-import { Trash2, Plus, ChevronDown, MoreHorizontal, Star } from 'lucide-react';
+import { Trash2, Plus, LogOut, ChevronDown, UtensilsCrossed, BarChart2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-type AdminTab = 'pulse' | 'vendors' | 'meals' | 'payouts' | 'team';
 
 interface Vendor {
   id: string;
@@ -18,13 +17,15 @@ interface Vendor {
   zelle_contact: string | null;
   cuisine_tags: string[] | null;
   logo_url: string | null;
+  description: string | null;
   is_active: boolean;
   created_at: string;
 }
 
 interface VendorUser {
   id: string;
-  clerk_user_id: string;
+  clerk_user_id: string | null;
+  email: string | null;
   display_name: string;
   role: 'superadmin' | 'vendor';
   vendor_id: string | null;
@@ -32,8 +33,11 @@ interface VendorUser {
   created_at: string;
 }
 
-const toSlug = (name: string) =>
-  name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const INPUT = 'w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors';
+const LABEL = 'block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1.5';
+
+const TABS = ['pulse', 'meals', 'team'] as const;
+type Tab = typeof TABS[number];
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -42,148 +46,106 @@ export default function AdminPanel() {
   const { session } = useSession();
   const { meals, refetch } = useMeals();
 
-  // ── UI state ─────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<AdminTab>('pulse');
+  const [activeTab, setActiveTab] = useState<Tab>('meals');
 
-  // ── Meals state ───────────────────────────────────────────────────────────
+  // ── Meals ────────────────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [mealsVendorFilterId, setMealsVendorFilterId] = useState<string | null>(null);
+  const [activeVendors, setActiveVendors] = useState<{ id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
-    name: '',
-    vendor: '',
-    vendor_id: '',
-    description: '',
-    image_url: '',
-    price: '',
-    calories: '',
-    protein: '',
-    carbs: '',
-    fats: '',
-    ingredients: '',
-    dietary_tags: '',
+    name: '', vendor: '', vendor_id: '', description: '', image_url: '',
+    price: '', calories: '', protein: '', carbs: '', fats: '',
+    ingredients: '', dietary_tags: '', is_meal_of_week: false,
   });
 
-  const [activeVendors, setActiveVendors] = useState<{ id: string; name: string }[]>([]);
-  const [mealsVendorFilterId, setMealsVendorFilterId] = useState<string | null>(null);
-
-  // ── Team state ────────────────────────────────────────────────────────────
+  // ── Team ─────────────────────────────────────────────────────────────────
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [vendorUsers, setVendorUsers] = useState<VendorUser[]>([]);
   const [showVendorForm, setShowVendorForm] = useState(false);
   const [showSuperadminForm, setShowSuperadminForm] = useState(false);
+  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
   const [expandedSuperadminId, setExpandedSuperadminId] = useState<string | null>(null);
   const [showVendorMemberFormVendorId, setShowVendorMemberFormVendorId] = useState<string | null>(null);
-  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
-  const [editVendorFormData, setEditVendorFormData] = useState({
-    name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '',
-  });
+  const [editVendorFormData, setEditVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
+  const [editVendorLogoFile, setEditVendorLogoFile] = useState<File | null>(null);
+  const [vendorFormData, setVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
+  const [vendorLogoFile, setVendorLogoFile] = useState<File | null>(null);
+  const [superadminFormData, setSuperadminFormData] = useState({ clerk_user_id: '', display_name: '' });
+  const [vendorMemberFormData, setVendorMemberFormData] = useState({ email: '', display_name: '' });
   const [vendorUpdateLoading, setVendorUpdateLoading] = useState(false);
   const [vendorFormLoading, setVendorFormLoading] = useState(false);
   const [superadminFormLoading, setSuperadminFormLoading] = useState(false);
   const [vendorMemberFormLoading, setVendorMemberFormLoading] = useState(false);
-  const [vendorFormData, setVendorFormData] = useState({
-    name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '',
-  });
-  const [superadminFormData, setSuperadminFormData] = useState({
-    clerk_user_id: '', display_name: '',
-  });
-  const [vendorMemberFormData, setVendorMemberFormData] = useState({
-    clerk_user_id: '', display_name: '',
-  });
 
-  const superadmins = useMemo(
-    () => vendorUsers.filter((u) => u.role === 'superadmin'),
-    [vendorUsers],
-  );
-
+  const superadmins = useMemo(() => vendorUsers.filter(u => u.role === 'superadmin'), [vendorUsers]);
   const vendorMembersByVendorId = useMemo(() => {
     const map = new Map<string, VendorUser[]>();
     for (const u of vendorUsers) {
       if (u.role !== 'vendor' || !u.vendor_id) continue;
-      const list = map.get(u.vendor_id) ?? [];
-      list.push(u);
-      map.set(u.vendor_id, list);
+      map.set(u.vendor_id, [...(map.get(u.vendor_id) ?? []), u]);
     }
     return map;
   }, [vendorUsers]);
 
-  const filteredMeals = useMemo(() => {
-    if (!mealsVendorFilterId) return meals;
-    return meals.filter((m) => m.vendor_id === mealsVendorFilterId);
-  }, [meals, mealsVendorFilterId]);
-
-  const activeVendorsList = useMemo(() => vendors.filter((v) => v.is_active), [vendors]);
+  const filteredMeals = useMemo(() =>
+    mealsVendorFilterId ? meals.filter(m => m.vendor_id === mealsVendorFilterId) : meals,
+    [meals, mealsVendorFilterId]);
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!session) return;
-    const fetchActiveVendors = async () => {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { data } = await authedSupabase
-        .from('vendors')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
-      if (data) setActiveVendors(data);
-    };
-    fetchActiveVendors();
+    getSupabaseWithAuth(session).then(client =>
+      client.from('vendors').select('id, name').eq('is_active', true).order('name')
+        .then(({ data }) => { if (data) setActiveVendors(data); })
+    );
   }, [session]);
 
   const fetchTeamData = async () => {
     if (!session) return;
-    const authedSupabase = await getSupabaseWithAuth(session);
-    const [{ data: vendorsData }, { data: usersData }] = await Promise.all([
-      authedSupabase.from('vendors').select('*').order('name'),
-      authedSupabase
-        .from('vendor_users')
-        .select('id, clerk_user_id, display_name, role, vendor_id, created_at, vendors(name)')
-        .order('role'),
+    const client = await getSupabaseWithAuth(session);
+    const [{ data: vData }, { data: uData }] = await Promise.all([
+      client.from('vendors').select('*').order('name'),
+      client.from('vendor_users').select('id, clerk_user_id, email, display_name, role, vendor_id, created_at, vendors(name)').order('role'),
     ]);
-    if (vendorsData) setVendors(vendorsData as Vendor[]);
-    if (usersData) setVendorUsers(usersData as VendorUser[]);
+    if (vData) setVendors(vData as Vendor[]);
+    if (uData) setVendorUsers(uData as unknown as VendorUser[]);
   };
 
   useEffect(() => {
-    if ((activeTab === 'vendors' || activeTab === 'team' || activeTab === 'pulse') && session) {
-      fetchTeamData();
-    }
+    if (activeTab === 'team' && session) fetchTeamData();
   }, [activeTab, session]);
 
-  // ── Meals handlers ────────────────────────────────────────────────────────
-  const uploadImage = async (file: File): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = fileName;
+  // ── Meal handlers ─────────────────────────────────────────────────────────
+  const uploadImage = async (file: File) => {
+    const ext = file.name.split('.').pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false });
+    if (error) throw error;
+    return supabase.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
+  };
 
-    const { error: uploadError } = await supabase.storage
-      .from('meal-images')
-      .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage.from('meal-images').getPublicUrl(filePath);
-    return data.publicUrl;
+  const uploadVendorLogo = async (file: File) => {
+    const ext = file.name.split('.').pop();
+    const path = `vendor-logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false });
+    if (error) throw error;
+    return supabase.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
-
     try {
       let imageUrl = formData.image_url;
       if (uploadedFile) imageUrl = await uploadImage(uploadedFile);
+      if (!imageUrl) { alert('Please upload an image'); return; }
 
-      if (!imageUrl) {
-        alert('Please upload an image');
-        setIsUploading(false);
-        return;
-      }
-
-      const baseMealData = {
+      const payload = {
         name: formData.name,
         vendor: formData.vendor,
         vendor_id: formData.vendor_id || null,
@@ -194,29 +156,23 @@ export default function AdminPanel() {
         protein: parseInt(formData.protein) || 0,
         carbs: parseInt(formData.carbs) || 0,
         fats: parseInt(formData.fats) || 0,
-        ingredients: formData.ingredients.split(',').map((i) => i.trim()),
-        dietary_tags: formData.dietary_tags
-          ? formData.dietary_tags.split(',').map((t) => t.trim())
-          : [],
+        ingredients: formData.ingredients.split(',').map(i => i.trim()),
+        dietary_tags: formData.dietary_tags ? formData.dietary_tags.split(',').map(t => t.trim()) : [],
+        is_meal_of_week: formData.is_meal_of_week,
       };
 
-      const authedSupabase = await getSupabaseWithAuth(session);
-
+      const client = await getSupabaseWithAuth(session);
       if (editingMeal) {
-        const { error } = await authedSupabase
-          .from('meals')
-          .update({ ...baseMealData, updated_at: new Date().toISOString() })
-          .eq('id', editingMeal.id)
-          .select();
+        const { error } = await client.from('meals').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editingMeal.id);
         if (error) throw error;
       } else {
-        const { error } = await authedSupabase.from('meals').insert([baseMealData]).select();
+        const { error } = await client.from('meals').insert([payload]);
         if (error) throw error;
       }
       resetForm();
       refetch();
-    } catch (error) {
-      alert(`Failed to save meal: ${(error as any)?.message || 'Please try again.'}`);
+    } catch (err) {
+      alert(`Failed to save meal: ${(err as any)?.message || 'Please try again.'}`);
     } finally {
       setIsUploading(false);
     }
@@ -225,671 +181,342 @@ export default function AdminPanel() {
   const handleEdit = (meal: Meal) => {
     setEditingMeal(meal);
     setFormData({
-      name: meal.name,
-      vendor: meal.vendor,
-      vendor_id: meal.vendor_id || '',
-      description: meal.description || '',
-      image_url: meal.image_url,
-      price: meal.price.toString(),
-      calories: meal.calories.toString(),
-      protein: meal.protein.toString(),
-      carbs: meal.carbs.toString(),
-      fats: meal.fats.toString(),
-      ingredients: meal.ingredients.join(', '),
+      name: meal.name, vendor: meal.vendor, vendor_id: meal.vendor_id || '',
+      description: meal.description || '', image_url: meal.image_url,
+      price: meal.price.toString(), calories: meal.calories.toString(),
+      protein: meal.protein.toString(), carbs: meal.carbs.toString(),
+      fats: meal.fats.toString(), ingredients: meal.ingredients.join(', '),
       dietary_tags: meal.dietary_tags.join(', '),
+      is_meal_of_week: meal.is_meal_of_week ?? false,
     });
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { error } = await authedSupabase.from('meals').delete().eq('id', id);
-      if (error) throw error;
-      setConfirmDeleteId(null);
-      refetch();
-    } catch {
-      alert('Failed to delete meal. Please try again.');
-    }
-  };
-
-  const handleToggleMealOfWeek = async (meal: Meal) => {
-    const authedSupabase = await getSupabaseWithAuth(session);
-    if (meal.is_meal_of_week) {
-      await authedSupabase.from('meals').update({ is_meal_of_week: false }).eq('id', meal.id);
-    } else {
-      await authedSupabase.from('meals').update({ is_meal_of_week: false }).neq('id', meal.id);
-      await authedSupabase.from('meals').update({ is_meal_of_week: true }).eq('id', meal.id);
-    }
+    const client = await getSupabaseWithAuth(session);
+    const { error } = await client.from('meals').delete().eq('id', id);
+    if (error) { alert('Failed to delete meal.'); return; }
+    setConfirmDeleteId(null);
     refetch();
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '', vendor: '', vendor_id: '', description: '', image_url: '',
-      price: '', calories: '', protein: '', carbs: '', fats: '',
-      ingredients: '', dietary_tags: '',
-    });
-    setUploadedFile(null);
-    setEditingMeal(null);
-    setShowForm(false);
-  };
-
-  // ── Vendor row handlers ───────────────────────────────────────────────────
-  const startVendorEdit = (vendor: Vendor) => {
-    setEditVendorFormData({
-      name: vendor.name,
-      slug: vendor.slug,
-      contact_email: vendor.contact_email,
-      venmo_handle: vendor.venmo_handle ?? '',
-      zelle_contact: vendor.zelle_contact ?? '',
-    });
-    setEditingVendorId(vendor.id);
-  };
-
-  const cancelVendorEdit = () => {
-    setEditingVendorId(null);
-    setEditVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '' });
-  };
-
-  const handleVendorUpdate = async (e: React.FormEvent, vendorId: string) => {
-    e.preventDefault();
-    setVendorUpdateLoading(true);
-    try {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { error } = await authedSupabase
-        .from('vendors')
-        .update({
-          name: editVendorFormData.name,
-          slug: editVendorFormData.slug,
-          contact_email: editVendorFormData.contact_email,
-          venmo_handle: editVendorFormData.venmo_handle || null,
-          zelle_contact: editVendorFormData.zelle_contact || null,
-        })
-        .eq('id', vendorId);
-      if (error) throw error;
-      cancelVendorEdit();
-      fetchTeamData();
-    } catch (err) {
-      alert(`Failed to update vendor: ${(err as any)?.message || 'Please try again.'}`);
-    } finally {
-      setVendorUpdateLoading(false);
-    }
-  };
-
-  const handleVendorToggleActive = async (vendor: Vendor) => {
-    try {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { error } = await authedSupabase
-        .from('vendors')
-        .update({ is_active: !vendor.is_active })
-        .eq('id', vendor.id);
-      if (error) throw error;
-      fetchTeamData();
-    } catch (err) {
-      alert(`Failed to update vendor status: ${(err as any)?.message || 'Please try again.'}`);
-    }
+    setFormData({ name: '', vendor: '', vendor_id: '', description: '', image_url: '', price: '', calories: '', protein: '', carbs: '', fats: '', ingredients: '', dietary_tags: '', is_meal_of_week: false });
+    setUploadedFile(null); setEditingMeal(null); setShowForm(false);
   };
 
   // ── Team handlers ─────────────────────────────────────────────────────────
-  const resetVendorForm = () => {
-    setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '' });
-    setShowVendorForm(false);
-  };
-
-  const resetSuperadminForm = () => {
-    setSuperadminFormData({ clerk_user_id: '', display_name: '' });
-    setShowSuperadminForm(false);
-  };
-
-  const resetVendorMemberForm = () => {
-    setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
-    setShowVendorMemberFormVendorId(null);
-  };
-
   const handleVendorSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setVendorFormLoading(true);
+    e.preventDefault(); setVendorFormLoading(true);
     try {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { error } = await authedSupabase.from('vendors').insert([{
-        name: vendorFormData.name,
-        slug: vendorFormData.slug,
-        contact_email: vendorFormData.contact_email,
-        venmo_handle: vendorFormData.venmo_handle || null,
-        zelle_contact: vendorFormData.zelle_contact || null,
-        is_active: true,
-      }]);
+      let logoUrl = vendorFormData.logo_url || null;
+      if (vendorLogoFile) logoUrl = await uploadVendorLogo(vendorLogoFile);
+      const client = await getSupabaseWithAuth(session);
+      const { error } = await client.from('vendors').insert([{ name: vendorFormData.name, slug: vendorFormData.slug, contact_email: vendorFormData.contact_email, venmo_handle: vendorFormData.venmo_handle || null, zelle_contact: vendorFormData.zelle_contact || null, description: vendorFormData.description || null, logo_url: logoUrl, is_active: true }]);
       if (error) throw error;
-      resetVendorForm();
+      setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
+      setVendorLogoFile(null); setShowVendorForm(false);
       fetchTeamData();
-    } catch (err) {
-      alert(`Failed to add vendor: ${(err as any)?.message || 'Please try again.'}`);
-    } finally {
-      setVendorFormLoading(false);
-    }
+    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    finally { setVendorFormLoading(false); }
   };
 
   const handleSuperadminSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuperadminFormLoading(true);
+    e.preventDefault(); setSuperadminFormLoading(true);
     try {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { error } = await authedSupabase.from('vendor_users').insert([{
-        clerk_user_id: superadminFormData.clerk_user_id.trim(),
-        display_name: superadminFormData.display_name.trim(),
-        role: 'superadmin' as const,
-        vendor_id: null,
-      }]);
+      const client = await getSupabaseWithAuth(session);
+      const { error } = await client.from('vendor_users').insert([{ clerk_user_id: superadminFormData.clerk_user_id.trim(), display_name: superadminFormData.display_name.trim(), role: 'superadmin', vendor_id: null }]);
       if (error) throw error;
-      resetSuperadminForm();
+      setSuperadminFormData({ clerk_user_id: '', display_name: '' }); setShowSuperadminForm(false);
       fetchTeamData();
-    } catch (err) {
-      alert(`Failed to add super admin: ${(err as any)?.message || 'Please try again.'}`);
-    } finally {
-      setSuperadminFormLoading(false);
-    }
+    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    finally { setSuperadminFormLoading(false); }
   };
 
   const handleVendorMemberSubmit = async (e: React.FormEvent, vendorId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setVendorMemberFormLoading(true);
+    e.preventDefault(); e.stopPropagation(); setVendorMemberFormLoading(true);
     try {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { error } = await authedSupabase.from('vendor_users').insert([{
-        clerk_user_id: vendorMemberFormData.clerk_user_id.trim(),
-        display_name: vendorMemberFormData.display_name.trim(),
-        role: 'vendor' as const,
-        vendor_id: vendorId,
-      }]);
+      const client = await getSupabaseWithAuth(session);
+      const { error } = await client.from('vendor_users').insert([{ email: vendorMemberFormData.email.trim().toLowerCase(), display_name: vendorMemberFormData.display_name.trim(), role: 'vendor', vendor_id: vendorId }]);
       if (error) throw error;
-      resetVendorMemberForm();
+      setVendorMemberFormData({ email: '', display_name: '' }); setShowVendorMemberFormVendorId(null);
       fetchTeamData();
-    } catch (err) {
-      alert(`Failed to add vendor account: ${(err as any)?.message || 'Please try again.'}`);
-    } finally {
-      setVendorMemberFormLoading(false);
-    }
+    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    finally { setVendorMemberFormLoading(false); }
   };
 
-  const initials = user?.firstName && user?.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`
-    : user?.firstName?.[0] ?? '?';
+  const handleVendorUpdate = async (e: React.FormEvent, vendorId: string) => {
+    e.preventDefault(); setVendorUpdateLoading(true);
+    try {
+      let logoUrl = editVendorFormData.logo_url || null;
+      if (editVendorLogoFile) logoUrl = await uploadVendorLogo(editVendorLogoFile);
+      const client = await getSupabaseWithAuth(session);
+      const { error } = await client.from('vendors').update({ name: editVendorFormData.name, slug: editVendorFormData.slug, contact_email: editVendorFormData.contact_email, venmo_handle: editVendorFormData.venmo_handle || null, zelle_contact: editVendorFormData.zelle_contact || null, description: editVendorFormData.description || null, logo_url: logoUrl }).eq('id', vendorId);
+      if (error) throw error;
+      setEditingVendorId(null); setEditVendorLogoFile(null); fetchTeamData();
+    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    finally { setVendorUpdateLoading(false); }
+  };
 
-  const TABS: { key: AdminTab; label: string }[] = [
-    { key: 'pulse', label: 'Pulse' },
-    { key: 'vendors', label: 'Vendors' },
-    { key: 'meals', label: 'Meals' },
-    { key: 'payouts', label: 'Payouts' },
-    { key: 'team', label: 'Team' },
-  ];
+  const handleVendorToggleActive = async (vendor: Vendor) => {
+    const client = await getSupabaseWithAuth(session);
+    await client.from('vendors').update({ is_active: !vendor.is_active }).eq('id', vendor.id);
+    fetchTeamData();
+  };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Shared styles ─────────────────────────────────────────────────────────
+  const card = 'bg-card rounded-2xl border border-line overflow-hidden';
+  const sectionTitle = 'font-display text-2xl font-semibold text-ink';
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-line px-6 flex items-center gap-5 h-[68px] shrink-0">
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => navigate('/')}
-            className="font-brand text-2xl font-semibold text-primary tracking-tight hover:opacity-80 transition-opacity"
-          >
-            bloo
+    <div className="min-h-screen bg-page">
+      {/* Header */}
+      <header className="bg-card border-b border-line sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <button onClick={() => navigate('/')} className="group flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <h1 className="font-display text-2xl font-semibold italic text-primary">bloo</h1>
+            <span className="text-xs text-ink-muted font-sans uppercase tracking-wider border-l border-line pl-3">Admin</span>
           </button>
-          <span className="inline-flex px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-primary/10 text-primary border border-primary/20">
-            Admin
-          </span>
+          <div className="flex items-center gap-2">
+            {user && <span className="text-xs text-ink-muted font-sans hidden sm:block">{user.primaryEmailAddress?.emailAddress}</span>}
+            <Button variant="secondary" className="text-sm py-2" onClick={() => signOut({ redirectUrl: '/' })}>
+              <LogOut size={15} className="mr-1.5" /> Sign out
+            </Button>
+          </div>
         </div>
 
-        <nav className="flex gap-1 ml-6 h-full">
-          {TABS.map((t) => (
+        {/* Tabs */}
+        <div className="max-w-7xl mx-auto px-6 flex gap-0 border-t border-line">
+          {TABS.map(tab => (
             <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`px-4 text-[13px] font-medium border-b-2 transition-colors h-full ${
-                activeTab === t.key
-                  ? 'border-primary text-ink font-semibold'
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-5 py-3 text-sm font-semibold capitalize transition-colors border-b-2 -mb-px ${
+                activeTab === tab
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-ink-muted hover:text-ink'
               }`}
             >
-              {t.label}
+              {tab === 'pulse' && <BarChart2 size={14} className="inline mr-1.5 -mt-0.5" />}
+              {tab === 'team' && <Users size={14} className="inline mr-1.5 -mt-0.5" />}
+              {tab === 'meals' && <UtensilsCrossed size={14} className="inline mr-1.5 -mt-0.5" />}
+              {tab}
             </button>
           ))}
-        </nav>
-
-        <div className="flex-1" />
-
-        <div className="hidden lg:flex items-center gap-2 text-[12px] text-ink-muted">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
-          {activeVendorsList.length} kitchen{activeVendorsList.length !== 1 ? 's' : ''} open
         </div>
-
-        <button
-          onClick={() => { setShowVendorForm(true); setActiveTab('vendors'); }}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white text-[13px] font-semibold rounded-lg hover:bg-primary/90 transition-colors shrink-0"
-        >
-          <Plus size={14} />
-          Add vendor
-        </button>
-
-        <button
-          onClick={() => signOut({ redirectUrl: '/' })}
-          className="text-xs text-ink-muted hover:text-ink font-medium transition-colors shrink-0"
-        >
-          Sign out
-        </button>
-
-        <button
-          onClick={() => {}}
-          className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[12px] flex items-center justify-center shrink-0"
-        >
-          {initials}
-        </button>
       </header>
 
-      {/* ── Body ──────────────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-auto">
+      <main className="max-w-7xl mx-auto px-6 py-10">
 
-        {/* ════════════════════════════════════════════════════════════════
-            PULSE TAB
-        ════════════════════════════════════════════════════════════════ */}
+        {/* ══ PULSE TAB ══════════════════════════════════════════════════════ */}
         {activeTab === 'pulse' && (
-          <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-            {/* KPI row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-8">
+            <h2 className={sectionTitle}>Pulse</h2>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Active vendors', value: activeVendorsList.length.toString(), sub: `of ${vendors.length} total` },
-                { label: 'Meals live', value: meals.filter(m => activeVendors.some(v => v.id === m.vendor_id)).length.toString(), sub: 'across all vendors' },
-                { label: 'Super admins', value: superadmins.length.toString(), sub: 'platform team' },
-                { label: 'All meals', value: meals.length.toString(), sub: 'in database' },
-              ].map((kpi) => (
-                <div key={kpi.label} className="bg-white rounded-xl border border-line p-5 shadow-sm">
-                  <div className="text-[10px] uppercase tracking-wider font-semibold text-ink-faint font-label mb-1">{kpi.label}</div>
-                  <div className="font-brand text-3xl font-semibold text-ink leading-tight">{kpi.value}</div>
-                  <div className="text-[11.5px] text-ink-muted mt-1">{kpi.sub}</div>
+                { label: 'Total meals', value: meals.length },
+                { label: 'Active vendors', value: activeVendors.length },
+                { label: 'Meal of the week', value: meals.find(m => m.is_meal_of_week)?.name ?? '—' },
+                { label: 'Vendors', value: vendors.length },
+              ].map(({ label, value }) => (
+                <div key={label} className={`${card} p-5`}>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">{label}</div>
+                  <div className="font-display text-2xl font-semibold text-ink truncate">{value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Vendor grid */}
-            {vendors.length > 0 && (
-              <div>
-                <h2 className="text-base font-bold text-ink mb-4 flex items-center gap-2">
-                  Vendors
-                  <span className="inline-flex px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-primary/10 text-primary">
-                    {activeVendorsList.length} open
-                  </span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {vendors.map((v) => (
-                    <div
-                      key={v.id}
-                      className={`bg-white rounded-xl border border-line p-5 shadow-sm ${!v.is_active ? 'opacity-60' : ''}`}
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                          {v.name.split(' ').map(s => s[0]).join('').slice(0, 2)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-[14px] text-ink truncate">{v.name}</span>
-                            {v.is_active
-                              ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />open</span>
-                              : <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface text-ink-muted border border-line shrink-0">paused</span>
-                            }
-                          </div>
-                          <div className="text-[10.5px] text-ink-faint font-mono mt-0.5">/{v.slug}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-line">
-                        <span className="text-[11px] text-ink-muted">{v.contact_email}</span>
-                        <button
-                          onClick={() => navigate(`/admin/vendor/${v.slug}`)}
-                          className="text-[11px] font-semibold text-primary hover:underline"
-                        >
-                          Open →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* Meals by vendor */}
+            <div className={card}>
+              <div className="px-6 py-4 border-b border-line">
+                <h3 className="font-display text-lg font-semibold text-ink">Meals by vendor</h3>
               </div>
-            )}
+              {activeVendors.length === 0 ? (
+                <div className="p-10 text-center text-ink-muted text-sm">No vendors yet.</div>
+              ) : (
+                <div className="divide-y divide-line">
+                  {activeVendors.map(v => {
+                    const count = meals.filter(m => m.vendor_id === v.id).length;
+                    const pct = meals.length ? Math.round((count / meals.length) * 100) : 0;
+                    return (
+                      <div key={v.id} className="flex items-center gap-4 px-6 py-4">
+                        <span className="text-sm font-medium text-ink w-40 truncate">{v.name}</span>
+                        <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-sm font-semibold text-ink w-16 text-right">{count} meals</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-            {/* Super admins quick list */}
-            {superadmins.length > 0 && (
-              <div>
-                <h2 className="text-base font-bold text-ink mb-4">Super admins</h2>
-                <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
-                  {superadmins.map((a, idx) => (
-                    <div
-                      key={a.id}
-                      className={`flex items-center gap-3 px-5 py-3.5 ${idx > 0 ? 'border-t border-line' : ''}`}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[11px] flex items-center justify-center shrink-0">
-                        {a.display_name.split(' ').map(s => s[0]).join('')}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-[13px] text-ink">{a.display_name}</span>
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-semibold bg-primary/10 text-primary">superadmin</span>
-                        </div>
-                        <div className="text-[10.5px] text-ink-faint font-mono truncate">{a.clerk_user_id}</div>
-                      </div>
+            {/* Recent meals */}
+            <div className={card}>
+              <div className="px-6 py-4 border-b border-line">
+                <h3 className="font-display text-lg font-semibold text-ink">Recently added</h3>
+              </div>
+              <div className="divide-y divide-line">
+                {meals.slice(0, 5).map(meal => (
+                  <div key={meal.id} className="flex items-center gap-4 px-6 py-3">
+                    <img src={meal.image_url} alt={meal.name} className="w-10 h-10 rounded-lg object-cover border border-line" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-ink truncate">{meal.name}</p>
+                      <p className="text-xs text-ink-muted">{meal.vendor}</p>
                     </div>
-                  ))}
-                </div>
+                    <span className="text-xs text-ink-faint">{meal.calories} cal</span>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {vendors.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mb-4">
-                  <Plus size={22} className="text-ink-faint" />
-                </div>
-                <p className="text-ink-muted text-sm">No vendors yet. Add one to get started.</p>
-                <button
-                  onClick={() => { setShowVendorForm(true); setActiveTab('vendors'); }}
-                  className="mt-3 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  Add vendor
-                </button>
-              </div>
-            )}
+            </div>
           </div>
         )}
 
-        {/* ════════════════════════════════════════════════════════════════
-            MEALS TAB
-        ════════════════════════════════════════════════════════════════ */}
+        {/* ══ MEALS TAB ══════════════════════════════════════════════════════ */}
         {activeTab === 'meals' && (
-          <div className="max-w-6xl mx-auto px-6 py-8">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-ink font-body">Meals</h2>
-                <p className="text-sm text-ink-muted mt-0.5">All meals across every vendor</p>
-              </div>
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                <Plus size={15} />
-                {showForm ? 'Cancel' : 'Add meal'}
-              </button>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className={sectionTitle}>Meals</h2>
+              <Button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} className="flex items-center gap-2">
+                <Plus size={16} /> {showForm ? 'Cancel' : 'Add meal'}
+              </Button>
             </div>
 
+            {/* Meal form */}
             {showForm && (
-              <div className="bg-white rounded-xl border border-line shadow-sm p-6 mb-6">
-                <h3 className="text-base font-bold text-ink mb-4">
-                  {editingMeal ? 'Edit meal' : 'Add new meal'}
+              <div className={`${card} p-6`}>
+                <h3 className="font-display text-lg font-semibold text-ink mb-5">
+                  {editingMeal ? 'Edit meal' : 'New meal'}
                 </h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-8">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="grid gap-6 lg:grid-cols-12">
+                    {/* Left column */}
                     <div className="space-y-4 lg:col-span-4">
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                          Meal image
-                        </label>
+                        <label className={LABEL}>Image</label>
                         <ImageUpload
-                          onImageSelect={(file) => setUploadedFile(file)}
+                          onImageSelect={f => setUploadedFile(f)}
                           currentImageUrl={formData.image_url}
-                          onImageRemove={() => {
-                            setUploadedFile(null);
-                            setFormData({ ...formData, image_url: '' });
-                          }}
+                          onImageRemove={() => { setUploadedFile(null); setFormData(d => ({ ...d, image_url: '' })); }}
                           disabled={isUploading}
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Meal name</label>
-                        <input
-                          type="text"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          required
-                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          placeholder="Grilled Salmon Bowl"
-                        />
+                        <label className={LABEL}>Meal name</label>
+                        <input className={INPUT} value={formData.name} onChange={e => setFormData(d => ({ ...d, name: e.target.value }))} required placeholder="Grilled Salmon Bowl" />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Price (USD)</label>
-                        <input
-                          type="number" step="0.01" min="0"
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                          required
-                          className="w-full max-w-[11rem] rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          placeholder="12.99"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 lg:col-span-8">
-                      <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Vendor</label>
-                        <select
-                          value={formData.vendor_id}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            const name = activeVendors.find((v) => v.id === id)?.name ?? '';
-                            setFormData({ ...formData, vendor_id: id, vendor: name });
-                          }}
-                          required
-                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="">— select a vendor —</option>
-                          {activeVendors.map((v) => (
-                            <option key={v.id} value={v.id}>{v.name}</option>
-                          ))}
+                        <label className={LABEL}>Vendor</label>
+                        <select className={INPUT} value={formData.vendor_id} onChange={e => { const id = e.target.value; setFormData(d => ({ ...d, vendor_id: id, vendor: activeVendors.find(v => v.id === id)?.name ?? '' })); }} required>
+                          <option value="">— select vendor —</option>
+                          {activeVendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                         </select>
                       </div>
-
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                          Description <span className="font-normal normal-case text-ink-faint">(optional)</span>
-                        </label>
-                        <textarea
-                          value={formData.description}
-                          onChange={(e) => {
-                            if (e.target.value.length <= 500)
-                              setFormData({ ...formData, description: e.target.value });
-                          }}
-                          rows={2}
-                          maxLength={500}
-                          className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          placeholder="Highlight what makes this meal special..."
-                        />
-                        <div className="mt-1 flex justify-end">
-                          <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-ink-faint'}`}>
-                            {formData.description.length}/500
-                          </span>
-                        </div>
+                        <label className={LABEL}>Price (USD)</label>
+                        <input className={INPUT} type="number" step="0.01" min="0" value={formData.price} onChange={e => setFormData(d => ({ ...d, price: e.target.value }))} required placeholder="12.99" />
                       </div>
+                      <label className="flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" checked={formData.is_meal_of_week} onChange={e => setFormData(d => ({ ...d, is_meal_of_week: e.target.checked }))} className="w-4 h-4 accent-primary rounded" />
+                        <span className="text-sm font-medium text-ink">Meal of the week</span>
+                      </label>
+                    </div>
 
+                    {/* Right column */}
+                    <div className="space-y-4 lg:col-span-8">
                       <div>
-                        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Nutrition</label>
+                        <label className={LABEL}>Description <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                        <textarea className={`${INPUT} resize-none`} value={formData.description} onChange={e => e.target.value.length <= 500 && setFormData(d => ({ ...d, description: e.target.value }))} rows={2} placeholder="What makes this meal special…" />
+                        <p className={`text-right text-xs mt-1 ${formData.description.length > 450 ? 'text-accent' : 'text-ink-faint'}`}>{formData.description.length}/500</p>
+                      </div>
+                      <div>
+                        <label className={LABEL}>Nutrition</label>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                          {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
-                            <div key={field}>
-                              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-ink-faint">
-                                {field === 'calories' ? 'Cal' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
-                              </label>
-                              <input
-                                type="number"
-                                value={formData[field]}
-                                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                                required
-                                className="w-full rounded-lg border border-line bg-white px-2.5 py-2 text-sm tabular-nums text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                              />
+                          {(['calories', 'protein', 'carbs', 'fats'] as const).map(f => (
+                            <div key={f}>
+                              <label className="block text-[11px] font-medium uppercase tracking-wide text-ink-faint mb-1">{f === 'calories' ? 'Cal' : `${f[0].toUpperCase() + f.slice(1)} (g)`}</label>
+                              <input className={INPUT} type="number" value={formData[f]} onChange={e => setFormData(d => ({ ...d, [f]: e.target.value }))} required />
                             </div>
                           ))}
                         </div>
                       </div>
-
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                          Ingredients <span className="font-normal normal-case text-ink-faint">(comma-separated)</span>
-                        </label>
-                        <textarea
-                          value={formData.ingredients}
-                          onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                          required rows={3}
-                          className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
-                        />
+                        <label className={LABEL}>Ingredients <span className="normal-case font-normal text-ink-faint">(comma-separated)</span></label>
+                        <textarea className={`${INPUT} resize-none`} value={formData.ingredients} onChange={e => setFormData(d => ({ ...d, ingredients: e.target.value }))} required rows={3} placeholder="Salmon, quinoa, avocado, lemon" />
                       </div>
-
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                          Dietary tags <span className="font-normal normal-case text-ink-faint">(optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.dietary_tags}
-                          onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
-                          placeholder="keto, gluten-free, high-protein"
-                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
+                        <label className={LABEL}>Dietary tags <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                        <input className={INPUT} value={formData.dietary_tags} onChange={e => setFormData(d => ({ ...d, dietary_tags: e.target.value }))} placeholder="keto, gluten-free, high-protein" />
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap gap-2 border-t border-line pt-4">
-                    <button
-                      type="submit"
-                      disabled={isUploading}
-                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
-                    >
-                      {isUploading ? 'Uploading...' : editingMeal ? 'Update meal' : 'Add meal'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      disabled={isUploading}
-                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line transition-colors disabled:opacity-60"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex gap-3 pt-2 border-t border-line">
+                    <Button type="submit" disabled={isUploading}>{isUploading ? 'Saving…' : editingMeal ? 'Update meal' : 'Add meal'}</Button>
+                    <Button type="button" variant="secondary" onClick={resetForm} disabled={isUploading}>Cancel</Button>
                   </div>
                 </form>
               </div>
             )}
 
+            {/* Vendor filter */}
             {meals.length > 0 && (
-              <div className="mb-5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint mb-2">Filter by vendor</p>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  <button
-                    onClick={() => setMealsVendorFilterId(null)}
-                    className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                      mealsVendorFilterId === null
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'border border-line bg-white text-ink-muted hover:bg-surface'
-                    }`}
-                  >
-                    All
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+                {[{ id: null, name: 'All' }, ...activeVendors].map(v => (
+                  <button key={v.id ?? 'all'} onClick={() => setMealsVendorFilterId(v.id)}
+                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${mealsVendorFilterId === v.id ? 'bg-primary text-white' : 'bg-card border border-line text-ink-muted hover:text-ink'}`}>
+                    {v.name}
                   </button>
-                  {activeVendors.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => setMealsVendorFilterId(v.id)}
-                      className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
-                        mealsVendorFilterId === v.id
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'border border-line bg-white text-ink-muted hover:bg-surface'
-                      }`}
-                    >
-                      {v.name}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
             )}
 
-            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
-              {meals.length === 0 ? (
+            {/* Meals table */}
+            <div className={card}>
+              {filteredMeals.length === 0 ? (
                 <div className="p-16 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mx-auto mb-4">
-                    <Plus size={24} className="text-ink-faint" />
-                  </div>
-                  <p className="text-ink-muted text-sm">No meals added yet. Click "Add meal" to get started.</p>
-                </div>
-              ) : filteredMeals.length === 0 ? (
-                <div className="p-16 text-center">
-                  <p className="text-ink-muted text-sm">No meals for this vendor.</p>
+                  <UtensilsCrossed className="mx-auto text-ink-faint mb-4" size={48} />
+                  <p className="text-ink-muted">{meals.length === 0 ? 'No meals yet. Click "Add meal" to get started.' : 'No meals for this vendor.'}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-line">
-                        {['Meal', 'Vendor', 'Price', 'Macros', 'Actions'].map((h) => (
-                          <th
-                            key={h}
-                            className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
-                          >
-                            {h}
-                          </th>
+                    <thead className="bg-surface border-b border-line">
+                      <tr>
+                        {['Meal', 'Vendor', 'Macros', 'MOTW', 'Actions'].map(h => (
+                          <th key={h} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider text-ink-muted ${h === 'Actions' ? 'text-right' : 'text-left'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
-                      {filteredMeals.map((meal) => (
-                        <tr key={meal.id} className="hover:bg-surface/30 transition-colors">
-                          <td className="px-5 py-4 whitespace-nowrap">
+                      {filteredMeals.map(meal => (
+                        <tr key={meal.id} className="hover:bg-surface/60 transition-colors">
+                          <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={meal.image_url}
-                                alt={meal.name}
-                                className="w-12 h-12 rounded-lg object-cover border border-line shrink-0"
-                              />
+                              <img src={meal.image_url} alt={meal.name} className="w-12 h-12 rounded-xl object-cover border border-line" />
                               <span className="text-sm font-semibold text-ink">{meal.name}</span>
                             </div>
                           </td>
-                          <td className="px-5 py-4 whitespace-nowrap text-sm text-ink-muted">{meal.vendor}</td>
-                          <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-ink tabular-nums">
-                            ${meal.price.toFixed(2)}
-                          </td>
-                          <td className="px-5 py-4 whitespace-nowrap text-xs text-ink-muted font-medium tabular-nums">
+                          <td className="px-5 py-4 text-sm text-ink-muted">{meal.vendor}</td>
+                          <td className="px-5 py-4 text-sm text-ink-muted font-mono">
                             {meal.calories} cal · {meal.protein}g P · {meal.carbs}g C · {meal.fats}g F
                           </td>
-                          <td className="px-5 py-4 whitespace-nowrap text-right">
+                          <td className="px-5 py-4 text-center">
+                            {meal.is_meal_of_week && <span className="inline-block px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full border border-amber-200">★ MOTW</span>}
+                          </td>
+                          <td className="px-5 py-4 text-right">
                             {confirmDeleteId === meal.id ? (
                               <div className="flex items-center justify-end gap-2">
-                                <span className="text-ink-muted text-xs font-medium">Delete?</span>
-                                <button
-                                  onClick={() => handleDelete(meal.id)}
-                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                                >Delete</button>
-                                <button
-                                  onClick={() => setConfirmDeleteId(null)}
-                                  className="px-3 py-1.5 bg-surface text-ink-muted text-xs rounded-lg hover:bg-line transition-colors font-medium"
-                                >Cancel</button>
+                                <span className="text-xs text-ink-muted">Delete?</span>
+                                <button onClick={() => handleDelete(meal.id)} className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 font-semibold">Delete</button>
+                                <button onClick={() => setConfirmDeleteId(null)} className="px-3 py-1.5 bg-surface text-ink text-xs rounded-lg hover:bg-line font-semibold">Cancel</button>
                               </div>
                             ) : (
                               <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleToggleMealOfWeek(meal)}
-                                  title={meal.is_meal_of_week ? 'Remove meal of the week' : 'Set as meal of the week'}
-                                  className={`p-1.5 rounded-lg transition-colors ${
-                                    meal.is_meal_of_week
-                                      ? 'text-amber-400 bg-amber-50 hover:bg-amber-100'
-                                      : 'text-ink-faint hover:bg-surface hover:text-amber-400'
-                                  }`}
-                                >
-                                  <Star size={15} fill={meal.is_meal_of_week ? 'currentColor' : 'none'} />
-                                </button>
-                                <button
-                                  onClick={() => handleEdit(meal)}
-                                  className="px-3 py-1.5 bg-primary/10 text-primary text-xs rounded-lg hover:bg-primary/20 transition-colors font-semibold"
-                                >Edit</button>
-                                <button
-                                  onClick={() => setConfirmDeleteId(meal.id)}
-                                  className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
+                                <button onClick={() => handleEdit(meal)} className="px-3 py-1.5 bg-primary/10 text-primary text-xs rounded-lg hover:bg-primary/20 font-semibold">Edit</button>
+                                <button onClick={() => setConfirmDeleteId(meal.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
                               </div>
                             )}
                           </td>
@@ -903,504 +530,180 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* ════════════════════════════════════════════════════════════════
-            VENDORS TAB
-        ════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'vendors' && (
-          <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-ink font-body">Vendors</h2>
-                <p className="text-sm text-ink-muted mt-0.5">
-                  Partner businesses on the platform
-                </p>
-              </div>
-              <button
-                onClick={() => setShowVendorForm(!showVendorForm)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                <Plus size={15} />
-                {showVendorForm ? 'Cancel' : 'Add vendor'}
-              </button>
-            </div>
-
-            {showVendorForm && (
-              <div className="bg-white rounded-xl border border-line shadow-sm p-6">
-                <h3 className="text-base font-bold text-ink mb-4">Add vendor</h3>
-                <form onSubmit={handleVendorSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Business name</label>
-                      <input
-                        type="text"
-                        value={vendorFormData.name}
-                        onChange={(e) => {
-                          const name = e.target.value;
-                          setVendorFormData({ ...vendorFormData, name, slug: toSlug(name) });
-                        }}
-                        required
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="Fresh Kitchen Co."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Slug</label>
-                      <input
-                        type="text"
-                        value={vendorFormData.slug}
-                        onChange={(e) => setVendorFormData({ ...vendorFormData, slug: e.target.value })}
-                        required
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="fresh-kitchen-co"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Contact email</label>
-                      <input
-                        type="email"
-                        value={vendorFormData.contact_email}
-                        onChange={(e) => setVendorFormData({ ...vendorFormData, contact_email: e.target.value })}
-                        required
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="owner@freshkitchen.com"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Venmo handle</label>
-                      <input
-                        type="text"
-                        value={vendorFormData.venmo_handle}
-                        onChange={(e) => setVendorFormData({ ...vendorFormData, venmo_handle: e.target.value })}
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="@FreshKitchen"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Zelle contact</label>
-                      <input
-                        type="text"
-                        value={vendorFormData.zelle_contact}
-                        onChange={(e) => setVendorFormData({ ...vendorFormData, zelle_contact: e.target.value })}
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        placeholder="owner@freshkitchen.com or phone"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="submit"
-                      disabled={vendorFormLoading}
-                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
-                    >
-                      {vendorFormLoading ? 'Adding...' : 'Add vendor'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetVendorForm}
-                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
-              {vendors.length === 0 ? (
-                <div className="p-16 text-center">
-                  <p className="text-ink-muted text-sm">No vendors yet. Add one to get started.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-line">
-                        {['Name', 'Slug', 'Contact Email', 'Venmo', 'Zelle', 'Status', ''].map((h, i) => (
-                          <th
-                            key={i}
-                            className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 ${i === 6 ? 'text-right' : 'text-left'}`}
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line">
-                      {vendors.map((vendor) => {
-                        const isExpanded = expandedVendorId === vendor.id;
-                        const isEditing = editingVendorId === vendor.id;
-                        const accountsForVendor = [...(vendorMembersByVendorId.get(vendor.id) ?? [])].sort(
-                          (a, b) => a.display_name.localeCompare(b.display_name),
-                        );
-                        return (
-                          <Fragment key={vendor.id}>
-                            <tr
-                              onClick={() => {
-                                if (isEditing) return;
-                                if (isExpanded) {
-                                  setExpandedVendorId(null);
-                                  setShowVendorMemberFormVendorId(null);
-                                } else {
-                                  setExpandedVendorId(vendor.id);
-                                  setShowVendorMemberFormVendorId(null);
-                                  setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
-                                }
-                              }}
-                              className="hover:bg-surface/30 transition-colors cursor-pointer select-none"
-                            >
-                              <td className="px-5 py-4 text-sm font-semibold text-ink whitespace-nowrap">{vendor.name}</td>
-                              <td className="px-5 py-4 text-sm text-ink-muted font-mono whitespace-nowrap">{vendor.slug}</td>
-                              <td className="px-5 py-4 text-sm text-ink-muted whitespace-nowrap">{vendor.contact_email}</td>
-                              <td className="px-5 py-4 text-sm text-ink-muted whitespace-nowrap">{vendor.venmo_handle ?? '—'}</td>
-                              <td className="px-5 py-4 text-sm text-ink-muted whitespace-nowrap">{vendor.zelle_contact ?? '—'}</td>
-                              <td className="px-5 py-4 whitespace-nowrap">
-                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                                  vendor.is_active
-                                    ? 'bg-green-50 text-green-700 border border-green-200'
-                                    : 'bg-surface text-ink-muted border border-line'
-                                }`}>
-                                  {vendor.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                              <td className="px-5 py-4 text-right">
-                                <ChevronDown
-                                  size={16}
-                                  className={`ml-auto text-ink-faint transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                                />
-                              </td>
-                            </tr>
-
-                            {isExpanded && (
-                              <tr className="bg-primary/[0.03]">
-                                <td colSpan={7} className="px-5 py-5">
-                                  <div className="space-y-6">
-                                    {isEditing ? (
-                                      <form onSubmit={(e) => handleVendorUpdate(e, vendor.id)} className="space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                          {[
-                                            { label: 'Business name', key: 'name', type: 'text' },
-                                            { label: 'Slug', key: 'slug', type: 'text', mono: true },
-                                            { label: 'Contact email', key: 'contact_email', type: 'email' },
-                                            { label: 'Venmo handle', key: 'venmo_handle', type: 'text' },
-                                            { label: 'Zelle contact', key: 'zelle_contact', type: 'text' },
-                                          ].map(({ label, key, type, mono }) => (
-                                            <div key={key}>
-                                              <label className="block text-xs font-semibold uppercase tracking-wider text-ink-faint mb-1">{label}</label>
-                                              <input
-                                                type={type}
-                                                value={editVendorFormData[key as keyof typeof editVendorFormData]}
-                                                onChange={(e) => setEditVendorFormData({ ...editVendorFormData, [key]: e.target.value })}
-                                                required={['name', 'slug', 'contact_email'].includes(key)}
-                                                className={`w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white ${mono ? 'font-mono' : ''}`}
-                                              />
-                                            </div>
-                                          ))}
-                                        </div>
-                                        <div className="flex gap-2">
-                                          <button
-                                            type="submit"
-                                            disabled={vendorUpdateLoading}
-                                            className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60"
-                                          >
-                                            {vendorUpdateLoading ? 'Saving...' : 'Save'}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={cancelVendorEdit}
-                                            className="px-4 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line"
-                                          >Cancel</button>
-                                        </div>
-                                      </form>
-                                    ) : (
-                                      <>
-                                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
-                                          {[
-                                            { label: 'Business Name', value: vendor.name },
-                                            { label: 'Slug', value: vendor.slug, mono: true },
-                                            { label: 'Contact Email', value: vendor.contact_email },
-                                            { label: 'Venmo Handle', value: vendor.venmo_handle ?? '—' },
-                                            { label: 'Zelle Contact', value: vendor.zelle_contact ?? '—' },
-                                            { label: 'Added On', value: new Date(vendor.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
-                                          ].map(({ label, value, mono }) => (
-                                            <div key={label}>
-                                              <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">{label}</dt>
-                                              <dd className={`text-ink-muted ${mono ? 'font-mono text-xs' : ''}`}>{value}</dd>
-                                            </div>
-                                          ))}
-                                        </dl>
-                                        <div className="flex gap-2 flex-wrap">
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); startVendorEdit(vendor); }}
-                                            className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90"
-                                          >Edit</button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); handleVendorToggleActive(vendor); }}
-                                            className="px-4 py-1.5 bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line border border-line"
-                                          >
-                                            {vendor.is_active ? 'Deactivate' : 'Activate'}
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendor/${vendor.slug}`); }}
-                                            className="px-4 py-1.5 bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line border border-line"
-                                          >View Panel</button>
-                                        </div>
-                                      </>
-                                    )}
-
-                                    <div className="border-t border-line pt-5">
-                                      <h4 className="text-xs font-bold text-ink uppercase tracking-wider mb-1">Vendor accounts</h4>
-                                      <p className="text-xs text-ink-muted mb-4">
-                                        Each staff member uses their own Clerk account.
-                                      </p>
-
-                                      {accountsForVendor.length > 0 && (
-                                        <div className="rounded-lg border border-line bg-white/70 mb-4 overflow-hidden">
-                                          <table className="w-full text-sm">
-                                            <thead className="bg-surface/50 border-b border-line">
-                                              <tr>
-                                                <th className="px-4 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint">Name</th>
-                                                <th className="px-4 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint">Clerk User ID</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-line">
-                                              {accountsForVendor.map((acc) => (
-                                                <tr key={acc.id}>
-                                                  <td className="px-4 py-2 font-medium text-ink text-sm">{acc.display_name}</td>
-                                                  <td className="px-4 py-2 font-mono text-xs text-ink-muted break-all">{acc.clerk_user_id}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      )}
-
-                                      {showVendorMemberFormVendorId === vendor.id ? (
-                                        <form
-                                          onSubmit={(e) => handleVendorMemberSubmit(e, vendor.id)}
-                                          className="rounded-xl border border-primary/25 bg-white p-4 space-y-3"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div>
-                                              <label className="block text-xs font-semibold text-ink-muted mb-1">Display name</label>
-                                              <input
-                                                type="text"
-                                                value={vendorMemberFormData.display_name}
-                                                onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, display_name: e.target.value })}
-                                                required
-                                                className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                                                placeholder="Jamie Lee"
-                                              />
-                                            </div>
-                                            <div>
-                                              <label className="block text-xs font-semibold text-ink-muted mb-1">Clerk User ID</label>
-                                              <input
-                                                type="text"
-                                                value={vendorMemberFormData.clerk_user_id}
-                                                onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, clerk_user_id: e.target.value })}
-                                                required
-                                                className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-mono"
-                                                placeholder="user_2..."
-                                              />
-                                            </div>
-                                          </div>
-                                          <div className="flex gap-2">
-                                            <button
-                                              type="submit"
-                                              disabled={vendorMemberFormLoading}
-                                              className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60"
-                                            >
-                                              {vendorMemberFormLoading ? 'Adding...' : 'Add account'}
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => resetVendorMemberForm()}
-                                              className="px-4 py-1.5 bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line"
-                                            >Cancel</button>
-                                          </div>
-                                        </form>
-                                      ) : (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
-                                            setShowVendorMemberFormVendorId(vendor.id);
-                                          }}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 border border-line bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line transition-colors"
-                                        >
-                                          <Plus size={12} />
-                                          Add vendor account
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════
-            TEAM TAB
-        ════════════════════════════════════════════════════════════════ */}
+        {/* ══ TEAM TAB ═══════════════════════════════════════════════════════ */}
         {activeTab === 'team' && (
-          <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-ink font-body">Super admins</h2>
-                <p className="text-sm text-ink-muted mt-0.5">
-                  Full access to this platform
-                </p>
-              </div>
-              <button
-                onClick={() => setShowSuperadminForm(!showSuperadminForm)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                <Plus size={15} />
-                {showSuperadminForm ? 'Cancel' : 'Add super admin'}
-              </button>
-            </div>
+          <div className="space-y-12">
 
-            {showSuperadminForm && (
-              <div className="bg-white rounded-xl border border-line shadow-sm p-6">
-                <h3 className="text-base font-bold text-ink mb-1">Add super admin</h3>
-                <p className="text-xs text-ink-muted mb-4">
-                  Create the user in Clerk, then paste their Clerk user ID here. Each person is a separate account.
-                </p>
-                <form onSubmit={handleSuperadminSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Display name</label>
-                      <input
-                        type="text"
-                        value={superadminFormData.display_name}
-                        onChange={(e) => setSuperadminFormData({ ...superadminFormData, display_name: e.target.value })}
-                        required
-                        className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
-                        placeholder="Alex Chen"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Clerk User ID</label>
-                      <input
-                        type="text"
-                        value={superadminFormData.clerk_user_id}
-                        onChange={(e) => setSuperadminFormData({ ...superadminFormData, clerk_user_id: e.target.value })}
-                        required
-                        className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-mono"
-                        placeholder="user_2abc..."
-                      />
-                      <p className="mt-1 text-[10.5px] text-ink-faint">Clerk Dashboard → Users → copy User ID</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={superadminFormLoading}
-                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60"
-                    >
-                      {superadminFormLoading ? 'Adding...' : 'Add super admin'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetSuperadminForm}
-                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line"
-                    >Cancel</button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
-              {superadmins.length === 0 ? (
-                <div className="p-16 text-center">
-                  <p className="text-ink-muted text-sm">No super admins yet. Add one to get started.</p>
+            {/* Super admins */}
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className={sectionTitle}>Super admins</h2>
+                  <p className="text-ink-muted text-sm mt-1">Full platform access. Each person needs their own Clerk account.</p>
                 </div>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-line">
-                      <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 text-left">Name</th>
-                      <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 text-right">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {superadmins.map((member) => {
-                      const isExpanded = expandedSuperadminId === member.id;
-                      const addedOn = new Date(member.created_at).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'short', day: 'numeric',
-                      });
-                      return (
-                        <Fragment key={member.id}>
-                          <tr
-                            onClick={() => setExpandedSuperadminId(isExpanded ? null : member.id)}
-                            className="hover:bg-surface/30 transition-colors cursor-pointer select-none"
-                          >
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[11px] flex items-center justify-center shrink-0">
-                                  {member.display_name.split(' ').map(s => s[0]).join('')}
-                                </div>
-                                <span className="text-sm font-semibold text-ink">{member.display_name}</span>
-                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-semibold bg-primary/10 text-primary">superadmin</span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-4 text-right">
-                              <ChevronDown
-                                size={16}
-                                className={`ml-auto text-ink-faint transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}
-                              />
-                            </td>
-                          </tr>
-                          {isExpanded && (
-                            <tr className="bg-primary/[0.03]">
-                              <td colSpan={2} className="px-5 py-4">
-                                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
-                                  <div>
-                                    <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">Display Name</dt>
-                                    <dd className="text-ink-muted">{member.display_name}</dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">Clerk User ID</dt>
-                                    <dd className="font-mono text-xs text-ink-muted break-all">{member.clerk_user_id}</dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">Added On</dt>
-                                    <dd className="text-ink-muted">{addedOn}</dd>
-                                  </div>
-                                </dl>
-                              </td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        )}
+                <Button onClick={() => setShowSuperadminForm(!showSuperadminForm)} className="flex items-center gap-2">
+                  <Plus size={16} />{showSuperadminForm ? 'Cancel' : 'Add admin'}
+                </Button>
+              </div>
 
-        {/* ════════════════════════════════════════════════════════════════
-            PAYOUTS TAB
-        ════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'payouts' && (
-          <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-6">
-            <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mb-4">
-              <MoreHorizontal size={22} className="text-ink-faint" />
-            </div>
-            <h3 className="text-base font-semibold text-ink mb-1">Payouts</h3>
-            <p className="text-sm text-ink-muted">Coming soon</p>
+              {showSuperadminForm && (
+                <div className={`${card} p-6 mb-5`}>
+                  <h3 className="font-display text-base font-semibold text-ink mb-4">Add super admin</h3>
+                  <form onSubmit={handleSuperadminSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label className={LABEL}>Display name</label><input className={INPUT} value={superadminFormData.display_name} onChange={e => setSuperadminFormData(d => ({ ...d, display_name: e.target.value }))} required placeholder="Alex Chen" /></div>
+                    <div><label className={LABEL}>Clerk User ID</label><input className={`${INPUT} font-mono`} value={superadminFormData.clerk_user_id} onChange={e => setSuperadminFormData(d => ({ ...d, clerk_user_id: e.target.value }))} required placeholder="user_2abc…" /><p className="text-xs text-ink-faint mt-1">Clerk Dashboard → Users → User ID</p></div>
+                    <div className="md:col-span-2 flex gap-3"><Button type="submit" disabled={superadminFormLoading}>{superadminFormLoading ? 'Adding…' : 'Add super admin'}</Button><Button type="button" variant="secondary" onClick={() => { setSuperadminFormData({ clerk_user_id: '', display_name: '' }); setShowSuperadminForm(false); }}>Cancel</Button></div>
+                  </form>
+                </div>
+              )}
+
+              <div className={card}>
+                {superadmins.length === 0 ? (
+                  <div className="p-10 text-center text-ink-muted text-sm">No super admins yet.</div>
+                ) : (
+                  <div className="divide-y divide-line">
+                    {superadmins.map(admin => (
+                      <div key={admin.id}>
+                        <button
+                          className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface/60 transition-colors"
+                          onClick={() => setExpandedSuperadminId(expandedSuperadminId === admin.id ? null : admin.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-sm font-semibold">{admin.display_name[0]}</div>
+                            <span className="text-sm font-semibold text-ink">{admin.display_name}</span>
+                          </div>
+                          <ChevronDown size={16} className={`text-ink-muted transition-transform ${expandedSuperadminId === admin.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        {expandedSuperadminId === admin.id && (
+                          <div className="px-5 pb-4 bg-surface/40 border-t border-line text-xs text-ink-muted font-mono space-y-1">
+                            <p>ID: {admin.clerk_user_id}</p>
+                            <p>Added: {new Date(admin.created_at).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Vendors */}
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className={sectionTitle}>Vendors</h2>
+                  <p className="text-ink-muted text-sm mt-1">Manage restaurants and their team members.</p>
+                </div>
+                <Button onClick={() => setShowVendorForm(!showVendorForm)} className="flex items-center gap-2">
+                  <Plus size={16} />{showVendorForm ? 'Cancel' : 'Add vendor'}
+                </Button>
+              </div>
+
+              {showVendorForm && (
+                <div className={`${card} p-6 mb-5`}>
+                  <h3 className="font-display text-base font-semibold text-ink mb-4">New vendor</h3>
+                  <form onSubmit={handleVendorSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[160px_1fr] gap-4">
+                      <div>
+                        <label className={LABEL}>Logo <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                        <ImageUpload onImageSelect={f => setVendorLogoFile(f)} currentImageUrl={vendorFormData.logo_url} onImageRemove={() => { setVendorLogoFile(null); setVendorFormData(d => ({ ...d, logo_url: '' })); }} disabled={vendorFormLoading} />
+                      </div>
+                      <div>
+                        <label className={LABEL}>Description <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                        <textarea className={`${INPUT} resize-none`} rows={4} value={vendorFormData.description} onChange={e => setVendorFormData(d => ({ ...d, description: e.target.value }))} placeholder="Tell customers about this restaurant…" />
+                      </div>
+                    </div>
+                    <div><label className={LABEL}>Name</label><input className={INPUT} value={vendorFormData.name} onChange={e => setVendorFormData(d => ({ ...d, name: e.target.value }))} required /></div>
+                    <div><label className={LABEL}>Slug</label><input className={`${INPUT} font-mono`} value={vendorFormData.slug} onChange={e => setVendorFormData(d => ({ ...d, slug: e.target.value }))} required placeholder="its-va-meals" /></div>
+                    <div><label className={LABEL}>Contact email</label><input className={INPUT} type="email" value={vendorFormData.contact_email} onChange={e => setVendorFormData(d => ({ ...d, contact_email: e.target.value }))} required /></div>
+                    <div><label className={LABEL}>Venmo <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.venmo_handle} onChange={e => setVendorFormData(d => ({ ...d, venmo_handle: e.target.value }))} /></div>
+                    <div className="md:col-span-2 flex gap-3"><Button type="submit" disabled={vendorFormLoading}>{vendorFormLoading ? 'Adding…' : 'Add vendor'}</Button><Button type="button" variant="secondary" onClick={() => { setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' }); setVendorLogoFile(null); setShowVendorForm(false); }}>Cancel</Button></div>
+                  </form>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {vendors.length === 0 ? (
+                  <div className={`${card} p-10 text-center text-ink-muted text-sm`}>No vendors yet.</div>
+                ) : vendors.map(vendor => (
+                  <div key={vendor.id} className={card}>
+                    <button
+                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-surface/40 transition-colors"
+                      onClick={() => setExpandedVendorId(expandedVendorId === vendor.id ? null : vendor.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${vendor.is_active ? 'bg-macro-green' : 'bg-ink-faint'}`} />
+                        <span className="text-sm font-semibold text-ink">{vendor.name}</span>
+                        <span className="text-xs text-ink-faint font-mono">/{vendor.slug}</span>
+                      </div>
+                      <ChevronDown size={16} className={`text-ink-muted transition-transform ${expandedVendorId === vendor.id ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {expandedVendorId === vendor.id && (
+                      <div className="border-t border-line p-5 space-y-5 bg-surface/30">
+                        {/* Edit form */}
+                        {editingVendorId === vendor.id ? (
+                          <form onSubmit={e => handleVendorUpdate(e, vendor.id)} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[160px_1fr] gap-4">
+                              <div>
+                                <label className={LABEL}>Logo <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                                <ImageUpload onImageSelect={f => setEditVendorLogoFile(f)} currentImageUrl={editVendorFormData.logo_url} onImageRemove={() => { setEditVendorLogoFile(null); setEditVendorFormData(d => ({ ...d, logo_url: '' })); }} disabled={vendorUpdateLoading} />
+                              </div>
+                              <div>
+                                <label className={LABEL}>Description <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                                <textarea className={`${INPUT} resize-none`} rows={4} value={editVendorFormData.description} onChange={e => setEditVendorFormData(d => ({ ...d, description: e.target.value }))} placeholder="Tell customers about this restaurant…" />
+                              </div>
+                            </div>
+                            <div><label className={LABEL}>Name</label><input className={INPUT} value={editVendorFormData.name} onChange={e => setEditVendorFormData(d => ({ ...d, name: e.target.value }))} required /></div>
+                            <div><label className={LABEL}>Slug</label><input className={`${INPUT} font-mono`} value={editVendorFormData.slug} onChange={e => setEditVendorFormData(d => ({ ...d, slug: e.target.value }))} required /></div>
+                            <div><label className={LABEL}>Email</label><input className={INPUT} type="email" value={editVendorFormData.contact_email} onChange={e => setEditVendorFormData(d => ({ ...d, contact_email: e.target.value }))} required /></div>
+                            <div><label className={LABEL}>Venmo</label><input className={INPUT} value={editVendorFormData.venmo_handle} onChange={e => setEditVendorFormData(d => ({ ...d, venmo_handle: e.target.value }))} /></div>
+                            <div className="md:col-span-2 flex gap-2"><Button type="submit" className="text-sm py-2" disabled={vendorUpdateLoading}>{vendorUpdateLoading ? 'Saving…' : 'Save'}</Button><Button type="button" variant="secondary" className="text-sm py-2" onClick={() => { setEditingVendorId(null); setEditVendorLogoFile(null); }}>Cancel</Button></div>
+                          </form>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            <button onClick={() => { setEditVendorFormData({ name: vendor.name, slug: vendor.slug, contact_email: vendor.contact_email, venmo_handle: vendor.venmo_handle ?? '', zelle_contact: vendor.zelle_contact ?? '', description: vendor.description ?? '', logo_url: vendor.logo_url ?? '' }); setEditVendorLogoFile(null); setEditingVendorId(vendor.id); }} className="px-3 py-1.5 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20">Edit details</button>
+                            <button onClick={() => handleVendorToggleActive(vendor)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${vendor.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-macro-green/10 text-macro-green hover:bg-macro-green/20'}`}>{vendor.is_active ? 'Deactivate' : 'Activate'}</button>
+                            <button onClick={() => navigate(`/admin/vendor/${vendor.slug}`)} className="px-3 py-1.5 text-xs font-semibold bg-surface text-ink border border-line rounded-lg hover:bg-line">Open vendor panel →</button>
+                          </div>
+                        )}
+
+                        {/* Members */}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Members</p>
+                            <button onClick={() => setShowVendorMemberFormVendorId(showVendorMemberFormVendorId === vendor.id ? null : vendor.id)} className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"><Plus size={12} />Add member</button>
+                          </div>
+
+                          {showVendorMemberFormVendorId === vendor.id && (
+                            <form onSubmit={e => handleVendorMemberSubmit(e, vendor.id)} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 p-4 bg-card rounded-xl border border-line">
+                              <div><label className={LABEL}>Display name</label><input className={INPUT} value={vendorMemberFormData.display_name} onChange={e => setVendorMemberFormData(d => ({ ...d, display_name: e.target.value }))} required placeholder="Jane's Kitchen" /></div>
+                              <div><label className={LABEL}>Email</label><input className={INPUT} type="email" value={vendorMemberFormData.email} onChange={e => setVendorMemberFormData(d => ({ ...d, email: e.target.value }))} required placeholder="vendor@email.com" /></div>
+                              <div className="md:col-span-2 flex gap-2"><Button type="submit" className="text-sm py-2" disabled={vendorMemberFormLoading}>{vendorMemberFormLoading ? 'Adding…' : 'Add member'}</Button><Button type="button" variant="secondary" className="text-sm py-2" onClick={() => { setVendorMemberFormData({ email: '', display_name: '' }); setShowVendorMemberFormVendorId(null); }}>Cancel</Button></div>
+                            </form>
+                          )}
+
+                          {(vendorMembersByVendorId.get(vendor.id) ?? []).length === 0 ? (
+                            <p className="text-xs text-ink-faint">No members yet.</p>
+                          ) : (vendorMembersByVendorId.get(vendor.id) ?? []).map(member => (
+                            <div key={member.id} className="flex items-center gap-3 py-2">
+                              <div className="w-7 h-7 rounded-full bg-surface border border-line flex items-center justify-center text-xs font-semibold text-ink-muted">{member.display_name[0]}</div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-ink font-medium">{member.display_name}</p>
+                                {member.email && <p className="text-xs text-ink-muted">{member.email}</p>}
+                              </div>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${member.clerk_user_id ? 'bg-macro-green/10 text-macro-green' : 'bg-surface text-ink-faint border border-line'}`}>
+                                {member.clerk_user_id ? '● linked' : '○ pending'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
         )}
       </main>

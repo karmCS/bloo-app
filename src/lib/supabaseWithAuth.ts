@@ -11,8 +11,7 @@ type ClerkSession = {
  * Returns a Supabase client with the Clerk JWT attached as the Authorization
  * header. Pass the `session` object from Clerk's useSession() hook.
  *
- * Requires a "supabase" JWT template configured in the Clerk dashboard
- * (Dashboard → JWT Templates → New → Supabase).
+ * Requires a "supabase" JWT template configured in the Clerk dashboard.
  */
 export async function getSupabaseWithAuth(session: ClerkSession) {
   const token = (await session?.getToken({ template: 'supabase' })) ?? null;

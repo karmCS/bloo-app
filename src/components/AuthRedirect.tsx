@@ -19,7 +19,14 @@ export default function AuthRedirect() {
     }
 
     const resolveRole = async () => {
-      // Use Clerk-authenticated client so Supabase RLS can verify the caller.
+      const email = user.primaryEmailAddress?.emailAddress;
+      if (email) {
+        await supabase.rpc('claim_vendor_invite', {
+          p_email: email,
+          p_clerk_user_id: user.id,
+        });
+      }
+
       const authedSupabase = await getSupabaseWithAuth(session);
 
       const { data: vendorUser, error } = await authedSupabase
@@ -56,7 +63,6 @@ export default function AuthRedirect() {
         return;
       }
 
-      // Unknown role — deny access
       await signOut();
       navigate('/unauthorized', { replace: true });
     };
@@ -65,8 +71,8 @@ export default function AuthRedirect() {
   }, [isLoaded, isSignedIn, user?.id, session]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+    <div className="min-h-screen bg-page flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-2 border-line border-t-primary" />
     </div>
   );
 }

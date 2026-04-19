@@ -3,10 +3,11 @@ import { useClerk, useUser, useSession } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { useMeals } from '../hooks/useMeals';
-import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
-import { Trash2, Plus, LogOut, UtensilsCrossed, ChevronDown } from 'lucide-react';
+import { Trash2, Plus, ChevronDown, MoreHorizontal, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+type AdminTab = 'pulse' | 'vendors' | 'meals' | 'payouts' | 'team';
 
 interface Vendor {
   id: string;
@@ -42,8 +43,7 @@ export default function AdminPanel() {
   const { meals, refetch } = useMeals();
 
   // ── UI state ─────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<'meals' | 'team'>('meals');
-  const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<AdminTab>('pulse');
 
   // ── Meals state ───────────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -86,19 +86,13 @@ export default function AdminPanel() {
   const [superadminFormLoading, setSuperadminFormLoading] = useState(false);
   const [vendorMemberFormLoading, setVendorMemberFormLoading] = useState(false);
   const [vendorFormData, setVendorFormData] = useState({
-    name: '',
-    slug: '',
-    contact_email: '',
-    venmo_handle: '',
-    zelle_contact: '',
+    name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '',
   });
   const [superadminFormData, setSuperadminFormData] = useState({
-    clerk_user_id: '',
-    display_name: '',
+    clerk_user_id: '', display_name: '',
   });
   const [vendorMemberFormData, setVendorMemberFormData] = useState({
-    clerk_user_id: '',
-    display_name: '',
+    clerk_user_id: '', display_name: '',
   });
 
   const superadmins = useMemo(
@@ -122,6 +116,8 @@ export default function AdminPanel() {
     return meals.filter((m) => m.vendor_id === mealsVendorFilterId);
   }, [meals, mealsVendorFilterId]);
 
+  const activeVendorsList = useMemo(() => vendors.filter((v) => v.is_active), [vendors]);
+
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!session) return;
@@ -136,20 +132,6 @@ export default function AdminPanel() {
     };
     fetchActiveVendors();
   }, [session]);
-
-  useEffect(() => {
-    if (!user || !session) return;
-    const fetchRole = async () => {
-      const authedSupabase = await getSupabaseWithAuth(session);
-      const { data } = await authedSupabase
-        .from('vendor_users')
-        .select('role')
-        .eq('clerk_user_id', user.id)
-        .maybeSingle();
-      if (data?.role === 'superadmin') setWelcomeMessage('Welcome, Admin');
-    };
-    fetchRole();
-  }, [user?.id, session]);
 
   const fetchTeamData = async () => {
     if (!session) return;
@@ -166,15 +148,12 @@ export default function AdminPanel() {
   };
 
   useEffect(() => {
-    if (activeTab !== 'team' || !session) return;
-    fetchTeamData();
+    if ((activeTab === 'vendors' || activeTab === 'team' || activeTab === 'pulse') && session) {
+      fetchTeamData();
+    }
   }, [activeTab, session]);
 
   // ── Meals handlers ────────────────────────────────────────────────────────
-  const handleLogout = () => {
-    signOut({ redirectUrl: '/' });
-  };
-
   const uploadImage = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -182,10 +161,7 @@ export default function AdminPanel() {
 
     const { error: uploadError } = await supabase.storage
       .from('meal-images')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
     if (uploadError) throw uploadError;
 
@@ -199,10 +175,7 @@ export default function AdminPanel() {
 
     try {
       let imageUrl = formData.image_url;
-
-      if (uploadedFile) {
-        imageUrl = await uploadImage(uploadedFile);
-      }
+      if (uploadedFile) imageUrl = await uploadImage(uploadedFile);
 
       if (!imageUrl) {
         alert('Please upload an image');
@@ -227,40 +200,22 @@ export default function AdminPanel() {
           : [],
       };
 
-      console.log('Base meal data:', baseMealData);
-      console.log('Editing meal?', !!editingMeal, editingMeal?.id);
-
       const authedSupabase = await getSupabaseWithAuth(session);
 
       if (editingMeal) {
-        const updateData = {
-          ...baseMealData,
-          updated_at: new Date().toISOString(),
-        };
-        console.log('meal payload:', updateData);
-
-        const { data, error } = await authedSupabase
+        const { error } = await authedSupabase
           .from('meals')
-          .update(updateData)
+          .update({ ...baseMealData, updated_at: new Date().toISOString() })
           .eq('id', editingMeal.id)
           .select();
-
-        console.log('Update response:', { data, error });
         if (error) throw error;
       } else {
-        console.log('meal payload:', baseMealData);
-
-        const { data, error } = await authedSupabase.from('meals').insert([baseMealData]).select();
-        console.log('Insert response:', { data, error });
+        const { error } = await authedSupabase.from('meals').insert([baseMealData]).select();
         if (error) throw error;
       }
       resetForm();
       refetch();
     } catch (error) {
-      console.error('Error saving meal - Full error object:', error);
-      console.error('Error message:', (error as any)?.message);
-      console.error('Error details:', (error as any)?.details);
-      console.error('Error hint:', (error as any)?.hint);
       alert(`Failed to save meal: ${(error as any)?.message || 'Please try again.'}`);
     } finally {
       setIsUploading(false);
@@ -293,42 +248,34 @@ export default function AdminPanel() {
       if (error) throw error;
       setConfirmDeleteId(null);
       refetch();
-    } catch (error) {
-      console.error('Error deleting meal:', error);
+    } catch {
       alert('Failed to delete meal. Please try again.');
     }
   };
 
+  const handleToggleMealOfWeek = async (meal: Meal) => {
+    const authedSupabase = await getSupabaseWithAuth(session);
+    if (meal.is_meal_of_week) {
+      await authedSupabase.from('meals').update({ is_meal_of_week: false }).eq('id', meal.id);
+    } else {
+      await authedSupabase.from('meals').update({ is_meal_of_week: false }).neq('id', meal.id);
+      await authedSupabase.from('meals').update({ is_meal_of_week: true }).eq('id', meal.id);
+    }
+    refetch();
+  };
+
   const resetForm = () => {
     setFormData({
-      name: '',
-      vendor: '',
-      vendor_id: '',
-      description: '',
-      image_url: '',
-      price: '',
-      calories: '',
-      protein: '',
-      carbs: '',
-      fats: '',
-      ingredients: '',
-      dietary_tags: '',
+      name: '', vendor: '', vendor_id: '', description: '', image_url: '',
+      price: '', calories: '', protein: '', carbs: '', fats: '',
+      ingredients: '', dietary_tags: '',
     });
     setUploadedFile(null);
     setEditingMeal(null);
     setShowForm(false);
   };
 
-  const handleImageSelect = (file: File) => {
-    setUploadedFile(file);
-  };
-
-  const handleImageRemove = () => {
-    setUploadedFile(null);
-    setFormData({ ...formData, image_url: '' });
-  };
-
-  // ── Vendor row expand / edit / toggle handlers ───────────────────────────
+  // ── Vendor row handlers ───────────────────────────────────────────────────
   const startVendorEdit = (vendor: Vendor) => {
     setEditVendorFormData({
       name: vendor.name,
@@ -466,115 +413,253 @@ export default function AdminPanel() {
     }
   };
 
+  const initials = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`
+    : user?.firstName?.[0] ?? '?';
+
+  const TABS: { key: AdminTab; label: string }[] = [
+    { key: 'pulse', label: 'Pulse' },
+    { key: 'vendors', label: 'Vendors' },
+    { key: 'meals', label: 'Meals' },
+    { key: 'payouts', label: 'Payouts' },
+    { key: 'team', label: 'Team' },
+  ];
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/20">
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            >
-              <UtensilsCrossed className="text-primary" size={28} />
-              <div className="text-left">
-                <h1 className="text-2xl font-bold text-primary font-brand tracking-wide">bloo</h1>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">Admin Portal</p>
-                {welcomeMessage && (
-                  <p className="text-xs text-primary font-medium mt-0.5">{welcomeMessage}</p>
-                )}
-              </div>
-            </button>
-            <Button onClick={handleLogout} variant="secondary">
-              <LogOut size={18} className="mr-2" />
-              Logout
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <header className="bg-white border-b border-line px-6 flex items-center gap-5 h-[68px] shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => navigate('/')}
+            className="font-brand text-2xl font-semibold text-primary tracking-tight hover:opacity-80 transition-opacity"
+          >
+            bloo
+          </button>
+          <span className="inline-flex px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-primary/10 text-primary border border-primary/20">
+            Admin
+          </span>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-
-        {/* ── Tab switcher ─────────────────────────────────────────────────── */}
-        <div className="flex gap-1 border-b border-gray-200 mb-8">
-          {(['meals', 'team'] as const).map((tab) => (
+        <nav className="flex gap-1 ml-6 h-full">
+          {TABS.map((t) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 text-sm font-semibold capitalize transition-colors ${
-                activeTab === tab
-                  ? 'border-b-2 border-primary text-primary'
-                  : 'text-gray-500 hover:text-gray-700'
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`px-4 text-[13px] font-medium border-b-2 transition-colors h-full ${
+                activeTab === t.key
+                  ? 'border-primary text-ink font-semibold'
+                  : 'border-transparent text-ink-muted hover:text-ink'
               }`}
             >
-              {tab}
+              {t.label}
             </button>
           ))}
+        </nav>
+
+        <div className="flex-1" />
+
+        <div className="hidden lg:flex items-center gap-2 text-[12px] text-ink-muted">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
+          {activeVendorsList.length} kitchen{activeVendorsList.length !== 1 ? 's' : ''} open
         </div>
 
-        {/* ════════════════════════════════════════════════════════════════════
-            MEALS TAB
-        ════════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'meals' && (
-          <>
-            <div className="mb-8 flex justify-between items-center">
+        <button
+          onClick={() => { setShowVendorForm(true); setActiveTab('vendors'); }}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white text-[13px] font-semibold rounded-lg hover:bg-primary/90 transition-colors shrink-0"
+        >
+          <Plus size={14} />
+          Add vendor
+        </button>
+
+        <button
+          onClick={() => signOut({ redirectUrl: '/' })}
+          className="text-xs text-ink-muted hover:text-ink font-medium transition-colors shrink-0"
+        >
+          Sign out
+        </button>
+
+        <button
+          onClick={() => {}}
+          className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[12px] flex items-center justify-center shrink-0"
+        >
+          {initials}
+        </button>
+      </header>
+
+      {/* ── Body ──────────────────────────────────────────────────────────── */}
+      <main className="flex-1 overflow-auto">
+
+        {/* ════════════════════════════════════════════════════════════════
+            PULSE TAB
+        ════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'pulse' && (
+          <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+            {/* KPI row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'Active vendors', value: activeVendorsList.length.toString(), sub: `of ${vendors.length} total` },
+                { label: 'Meals live', value: meals.filter(m => activeVendors.some(v => v.id === m.vendor_id)).length.toString(), sub: 'across all vendors' },
+                { label: 'Super admins', value: superadmins.length.toString(), sub: 'platform team' },
+                { label: 'All meals', value: meals.length.toString(), sub: 'in database' },
+              ].map((kpi) => (
+                <div key={kpi.label} className="bg-white rounded-xl border border-line p-5 shadow-sm">
+                  <div className="text-[10px] uppercase tracking-wider font-semibold text-ink-faint font-label mb-1">{kpi.label}</div>
+                  <div className="font-brand text-3xl font-semibold text-ink leading-tight">{kpi.value}</div>
+                  <div className="text-[11.5px] text-ink-muted mt-1">{kpi.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Vendor grid */}
+            {vendors.length > 0 && (
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Manage Meals</h2>
-                <p className="text-gray-600">Create and manage your weekly menu</p>
+                <h2 className="text-base font-bold text-ink mb-4 flex items-center gap-2">
+                  Vendors
+                  <span className="inline-flex px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-primary/10 text-primary">
+                    {activeVendorsList.length} open
+                  </span>
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {vendors.map((v) => (
+                    <div
+                      key={v.id}
+                      className={`bg-white rounded-xl border border-line p-5 shadow-sm ${!v.is_active ? 'opacity-60' : ''}`}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                          {v.name.split(' ').map(s => s[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[14px] text-ink truncate">{v.name}</span>
+                            {v.is_active
+                              ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />open</span>
+                              : <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface text-ink-muted border border-line shrink-0">paused</span>
+                            }
+                          </div>
+                          <div className="text-[10.5px] text-ink-faint font-mono mt-0.5">/{v.slug}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-line">
+                        <span className="text-[11px] text-ink-muted">{v.contact_email}</span>
+                        <button
+                          onClick={() => navigate(`/admin/vendor/${v.slug}`)}
+                          className="text-[11px] font-semibold text-primary hover:underline"
+                        >
+                          Open →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <Button
+            )}
+
+            {/* Super admins quick list */}
+            {superadmins.length > 0 && (
+              <div>
+                <h2 className="text-base font-bold text-ink mb-4">Super admins</h2>
+                <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
+                  {superadmins.map((a, idx) => (
+                    <div
+                      key={a.id}
+                      className={`flex items-center gap-3 px-5 py-3.5 ${idx > 0 ? 'border-t border-line' : ''}`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[11px] flex items-center justify-center shrink-0">
+                        {a.display_name.split(' ').map(s => s[0]).join('')}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-[13px] text-ink">{a.display_name}</span>
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-semibold bg-primary/10 text-primary">superadmin</span>
+                        </div>
+                        <div className="text-[10.5px] text-ink-faint font-mono truncate">{a.clerk_user_id}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {vendors.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mb-4">
+                  <Plus size={22} className="text-ink-faint" />
+                </div>
+                <p className="text-ink-muted text-sm">No vendors yet. Add one to get started.</p>
+                <button
+                  onClick={() => { setShowVendorForm(true); setActiveTab('vendors'); }}
+                  className="mt-3 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Add vendor
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════
+            MEALS TAB
+        ════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'meals' && (
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-ink font-body">Meals</h2>
+                <p className="text-sm text-ink-muted mt-0.5">All meals across every vendor</p>
+              </div>
+              <button
                 onClick={() => setShowForm(!showForm)}
-                className="flex items-center gap-2 px-6 py-3"
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <Plus size={20} />
-                {showForm ? 'Cancel' : 'Add New Meal'}
-              </Button>
+                <Plus size={15} />
+                {showForm ? 'Cancel' : 'Add meal'}
+              </button>
             </div>
 
             {showForm && (
-              <div className="mx-auto mb-8 max-w-5xl rounded-xl border border-gray-200/80 bg-white p-5 shadow-md sm:p-6">
-                <h3 className="mb-4 font-sans text-lg font-bold tracking-tight text-gray-900">
-                  {editingMeal ? 'Edit Meal' : 'Add New Meal'}
+              <div className="bg-white rounded-xl border border-line shadow-sm p-6 mb-6">
+                <h3 className="text-base font-bold text-ink mb-4">
+                  {editingMeal ? 'Edit meal' : 'Add new meal'}
                 </h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-8">
                     <div className="space-y-4 lg:col-span-4">
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
                           Meal image
                         </label>
                         <ImageUpload
-                          onImageSelect={handleImageSelect}
+                          onImageSelect={(file) => setUploadedFile(file)}
                           currentImageUrl={formData.image_url}
-                          onImageRemove={handleImageRemove}
+                          onImageRemove={() => {
+                            setUploadedFile(null);
+                            setFormData({ ...formData, image_url: '' });
+                          }}
                           disabled={isUploading}
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Meal name
-                        </label>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Meal name</label>
                         <input
                           type="text"
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           required
-                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-snug text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           placeholder="Grilled Salmon Bowl"
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Price (USD)
-                        </label>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Price (USD)</label>
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                          type="number" step="0.01" min="0"
                           value={formData.price}
                           onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                           required
-                          className="w-full max-w-[11rem] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          className="w-full max-w-[11rem] rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           placeholder="12.99"
                         />
                       </div>
@@ -582,9 +667,7 @@ export default function AdminPanel() {
 
                     <div className="space-y-4 lg:col-span-8">
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Vendor
-                        </label>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Vendor</label>
                         <select
                           value={formData.vendor_id}
                           onChange={(e) => {
@@ -593,7 +676,7 @@ export default function AdminPanel() {
                             setFormData({ ...formData, vendor_id: id, vendor: name });
                           }}
                           required
-                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">— select a vendor —</option>
                           {activeVendors.map((v) => (
@@ -603,37 +686,33 @@ export default function AdminPanel() {
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Description <span className="font-normal normal-case text-gray-400">(optional)</span>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Description <span className="font-normal normal-case text-ink-faint">(optional)</span>
                         </label>
                         <textarea
                           value={formData.description}
                           onChange={(e) => {
-                            const value = e.target.value;
-                            if (value.length <= 500) {
-                              setFormData({ ...formData, description: value });
-                            }
+                            if (e.target.value.length <= 500)
+                              setFormData({ ...formData, description: e.target.value });
                           }}
                           rows={2}
                           maxLength={500}
-                          className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                          placeholder="Highlight what makes this meal special - ingredients, preparation style, or story..."
+                          className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          placeholder="Highlight what makes this meal special..."
                         />
                         <div className="mt-1 flex justify-end">
-                          <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-gray-500'}`}>
+                          <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-ink-faint'}`}>
                             {formData.description.length}/500
                           </span>
                         </div>
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Nutrition
-                        </label>
+                        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ink-muted">Nutrition</label>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                           {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
                             <div key={field}>
-                              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-ink-faint">
                                 {field === 'calories' ? 'Cal' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
                               </label>
                               <input
@@ -641,7 +720,7 @@ export default function AdminPanel() {
                                 value={formData[field]}
                                 onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                                 required
-                                className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm tabular-nums text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                                className="w-full rounded-lg border border-line bg-white px-2.5 py-2 text-sm tabular-nums text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                               />
                             </div>
                           ))}
@@ -649,159 +728,167 @@ export default function AdminPanel() {
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Ingredients <span className="font-normal normal-case text-gray-400">(comma-separated)</span>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Ingredients <span className="font-normal normal-case text-ink-faint">(comma-separated)</span>
                         </label>
                         <textarea
                           value={formData.ingredients}
                           onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                          required
-                          rows={3}
-                          className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          required rows={3}
+                          className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Dietary tags <span className="font-normal normal-case text-gray-400">(optional)</span>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Dietary tags <span className="font-normal normal-case text-ink-faint">(optional)</span>
                         </label>
                         <input
                           type="text"
                           value={formData.dietary_tags}
                           onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
                           placeholder="keto, gluten-free, high-protein"
-                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
+                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
-                    <Button type="submit" className="px-5 py-2 text-sm" disabled={isUploading}>
-                      {isUploading ? 'Uploading...' : editingMeal ? 'Update Meal' : 'Add Meal'}
-                    </Button>
-                    <Button type="button" variant="secondary" onClick={resetForm} className="px-5 py-2 text-sm" disabled={isUploading}>
+                  <div className="flex flex-wrap gap-2 border-t border-line pt-4">
+                    <button
+                      type="submit"
+                      disabled={isUploading}
+                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {isUploading ? 'Uploading...' : editingMeal ? 'Update meal' : 'Add meal'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      disabled={isUploading}
+                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line transition-colors disabled:opacity-60"
+                    >
                       Cancel
-                    </Button>
+                    </button>
                   </div>
                 </form>
               </div>
             )}
 
             {meals.length > 0 && (
-              <div className="mb-6 -mx-1 px-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Filter by vendor</p>
-                <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth touch-pan-x [scrollbar-width:thin]">
+              <div className="mb-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint mb-2">Filter by vendor</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
                   <button
-                    type="button"
                     onClick={() => setMealsVendorFilterId(null)}
-                    className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-sans font-medium transition-colors ${
+                    className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
                       mealsVendorFilterId === null
                         ? 'bg-primary text-white shadow-sm'
-                        : 'border-2 border-primary bg-white text-primary hover:bg-primary/10'
+                        : 'border border-line bg-white text-ink-muted hover:bg-surface'
                     }`}
                   >
                     All
                   </button>
-                  {activeVendors.map((v) => {
-                    const active = mealsVendorFilterId === v.id;
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => setMealsVendorFilterId(v.id)}
-                        className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-sans font-medium transition-colors whitespace-nowrap ${
-                          active
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'border-2 border-primary bg-white text-primary hover:bg-primary/10'
-                        }`}
-                      >
-                        {v.name}
-                      </button>
-                    );
-                  })}
+                  {activeVendors.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setMealsVendorFilterId(v.id)}
+                      className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
+                        mealsVendorFilterId === v.id
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'border border-line bg-white text-ink-muted hover:bg-surface'
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
 
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
               {meals.length === 0 ? (
                 <div className="p-16 text-center">
-                  <UtensilsCrossed className="mx-auto text-gray-300 mb-4" size={64} />
-                  <p className="text-gray-500 text-lg">No meals added yet. Click "Add New Meal" to get started.</p>
+                  <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mx-auto mb-4">
+                    <Plus size={24} className="text-ink-faint" />
+                  </div>
+                  <p className="text-ink-muted text-sm">No meals added yet. Click "Add meal" to get started.</p>
                 </div>
               ) : filteredMeals.length === 0 ? (
                 <div className="p-16 text-center">
-                  <p className="text-gray-500 text-lg font-sans">No meals for this vendor. Choose another filter or add a meal.</p>
+                  <p className="text-ink-muted text-sm">No meals for this vendor.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
-                      <tr>
+                    <thead>
+                      <tr className="border-b border-line">
                         {['Meal', 'Vendor', 'Price', 'Macros', 'Actions'].map((h) => (
                           <th
                             key={h}
-                            className={`px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
+                            className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
                           >
                             {h}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-line">
                       {filteredMeals.map((meal) => (
-                        <tr key={meal.id} className="hover:bg-primary/5 transition-colors">
-                          <td className="px-6 py-5 whitespace-nowrap">
-                            <div className="flex items-center">
+                        <tr key={meal.id} className="hover:bg-surface/30 transition-colors">
+                          <td className="px-5 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
                               <img
                                 src={meal.image_url}
                                 alt={meal.name}
-                                className="w-16 h-16 rounded-lg object-cover mr-4 border border-gray-200"
+                                className="w-12 h-12 rounded-lg object-cover border border-line shrink-0"
                               />
-                              <div className="text-base font-bold text-gray-900 font-sans">{meal.name}</div>
+                              <span className="text-sm font-semibold text-ink">{meal.name}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-600 font-sans">
-                            {meal.vendor}
-                          </td>
-                          <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                          <td className="px-5 py-4 whitespace-nowrap text-sm text-ink-muted">{meal.vendor}</td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-ink tabular-nums">
                             ${meal.price.toFixed(2)}
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-700 font-medium">
-                            {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C | {meal.fats}g F
+                          <td className="px-5 py-4 whitespace-nowrap text-xs text-ink-muted font-medium tabular-nums">
+                            {meal.calories} cal · {meal.protein}g P · {meal.carbs}g C · {meal.fats}g F
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-5 py-4 whitespace-nowrap text-right">
                             {confirmDeleteId === meal.id ? (
-                              <div className="flex items-center justify-end gap-3">
-                                <span className="text-gray-600 text-sm font-semibold">Delete this meal?</span>
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-ink-muted text-xs font-medium">Delete?</span>
                                 <button
                                   onClick={() => handleDelete(meal.id)}
-                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                                >
-                                  Delete
-                                </button>
+                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                                >Delete</button>
                                 <button
                                   onClick={() => setConfirmDeleteId(null)}
-                                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                                >
-                                  Cancel
-                                </button>
+                                  className="px-3 py-1.5 bg-surface text-ink-muted text-xs rounded-lg hover:bg-line transition-colors font-medium"
+                                >Cancel</button>
                               </div>
                             ) : (
-                              <div className="flex items-center justify-end gap-3">
+                              <div className="flex items-center justify-end gap-2">
                                 <button
-                                  onClick={() => handleEdit(meal)}
-                                  className="px-4 py-2 bg-primary/15 text-primary rounded-lg hover:bg-primary/25 transition-colors font-semibold"
+                                  onClick={() => handleToggleMealOfWeek(meal)}
+                                  title={meal.is_meal_of_week ? 'Remove meal of the week' : 'Set as meal of the week'}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    meal.is_meal_of_week
+                                      ? 'text-amber-400 bg-amber-50 hover:bg-amber-100'
+                                      : 'text-ink-faint hover:bg-surface hover:text-amber-400'
+                                  }`}
                                 >
-                                  Edit
+                                  <Star size={15} fill={meal.is_meal_of_week ? 'currentColor' : 'none'} />
                                 </button>
                                 <button
+                                  onClick={() => handleEdit(meal)}
+                                  className="px-3 py-1.5 bg-primary/10 text-primary text-xs rounded-lg hover:bg-primary/20 transition-colors font-semibold"
+                                >Edit</button>
+                                <button
                                   onClick={() => setConfirmDeleteId(meal.id)}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                                 >
-                                  <Trash2 size={20} />
+                                  <Trash2 size={15} />
                                 </button>
                               </div>
                             )}
@@ -813,141 +900,341 @@ export default function AdminPanel() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
 
-        {/* ════════════════════════════════════════════════════════════════════
-            TEAM TAB
-        ════════════════════════════════════════════════════════════════════ */}
-        {activeTab === 'team' && (
-          <div className="space-y-12">
-
-            {/* ── Super admins (platform team) ─────────────────────────────── */}
-            <section>
-              <div className="mb-6 flex justify-between items-center">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Super admins</h2>
-                  <p className="text-gray-600">
-                    Full access to this platform. Each admin must use their own Clerk account — do not share one login.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowSuperadminForm(!showSuperadminForm)}
-                  className="flex items-center gap-2 px-6 py-3"
-                >
-                  <Plus size={20} />
-                  {showSuperadminForm ? 'Cancel' : 'Add super admin'}
-                </Button>
+        {/* ════════════════════════════════════════════════════════════════
+            VENDORS TAB
+        ════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'vendors' && (
+          <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-ink font-body">Vendors</h2>
+                <p className="text-sm text-ink-muted mt-0.5">
+                  Partner businesses on the platform
+                </p>
               </div>
+              <button
+                onClick={() => setShowVendorForm(!showVendorForm)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={15} />
+                {showVendorForm ? 'Cancel' : 'Add vendor'}
+              </button>
+            </div>
 
-              {showSuperadminForm && (
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Add super admin</h3>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Invite a teammate by creating their user in Clerk, then paste their Clerk user ID here. Each person is a separate account.
-                  </p>
-                  <form onSubmit={handleSuperadminSubmit} className="space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Display Name
-                        </label>
-                        <input
-                          type="text"
-                          value={superadminFormData.display_name}
-                          onChange={(e) => setSuperadminFormData({ ...superadminFormData, display_name: e.target.value })}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                          placeholder="Alex Chen"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Clerk User ID
-                        </label>
-                        <input
-                          type="text"
-                          value={superadminFormData.clerk_user_id}
-                          onChange={(e) => setSuperadminFormData({ ...superadminFormData, clerk_user_id: e.target.value })}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-mono text-sm"
-                          placeholder="user_2abc..."
-                        />
-                        <p className="mt-1.5 text-xs text-gray-400">
-                          Clerk Dashboard → Users → select the user → copy User ID
-                        </p>
-                      </div>
+            {showVendorForm && (
+              <div className="bg-white rounded-xl border border-line shadow-sm p-6">
+                <h3 className="text-base font-bold text-ink mb-4">Add vendor</h3>
+                <form onSubmit={handleVendorSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Business name</label>
+                      <input
+                        type="text"
+                        value={vendorFormData.name}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setVendorFormData({ ...vendorFormData, name, slug: toSlug(name) });
+                        }}
+                        required
+                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="Fresh Kitchen Co."
+                      />
                     </div>
-
-                    <div className="flex gap-3 pt-2">
-                      <Button type="submit" className="px-8 py-3" disabled={superadminFormLoading}>
-                        {superadminFormLoading ? 'Adding...' : 'Add super admin'}
-                      </Button>
-                      <Button type="button" variant="secondary" onClick={resetSuperadminForm} className="px-8 py-3">
-                        Cancel
-                      </Button>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Slug</label>
+                      <input
+                        type="text"
+                        value={vendorFormData.slug}
+                        onChange={(e) => setVendorFormData({ ...vendorFormData, slug: e.target.value })}
+                        required
+                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="fresh-kitchen-co"
+                      />
                     </div>
-                  </form>
-                </div>
-              )}
-
-              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                {superadmins.length === 0 ? (
-                  <div className="p-16 text-center">
-                    <p className="text-gray-500 text-lg">No super admins yet. Add one to get started.</p>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Contact email</label>
+                      <input
+                        type="email"
+                        value={vendorFormData.contact_email}
+                        onChange={(e) => setVendorFormData({ ...vendorFormData, contact_email: e.target.value })}
+                        required
+                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="owner@freshkitchen.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Venmo handle</label>
+                      <input
+                        type="text"
+                        value={vendorFormData.venmo_handle}
+                        onChange={(e) => setVendorFormData({ ...vendorFormData, venmo_handle: e.target.value })}
+                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="@FreshKitchen"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Zelle contact</label>
+                      <input
+                        type="text"
+                        value={vendorFormData.zelle_contact}
+                        onChange={(e) => setVendorFormData({ ...vendorFormData, zelle_contact: e.target.value })}
+                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="owner@freshkitchen.com or phone"
+                      />
+                    </div>
                   </div>
-                ) : (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={vendorFormLoading}
+                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {vendorFormLoading ? 'Adding...' : 'Add vendor'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetVendorForm}
+                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
+              {vendors.length === 0 ? (
+                <div className="p-16 text-center">
+                  <p className="text-ink-muted text-sm">No vendors yet. Add one to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">Name</th>
-                        <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-right">Details</th>
+                    <thead>
+                      <tr className="border-b border-line">
+                        {['Name', 'Slug', 'Contact Email', 'Venmo', 'Zelle', 'Status', ''].map((h, i) => (
+                          <th
+                            key={i}
+                            className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 ${i === 6 ? 'text-right' : 'text-left'}`}
+                          >
+                            {h}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {superadmins.map((member) => {
-                        const isExpanded = expandedSuperadminId === member.id;
-                        const addedOn = new Date(member.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric', month: 'short', day: 'numeric',
-                        });
+                    <tbody className="divide-y divide-line">
+                      {vendors.map((vendor) => {
+                        const isExpanded = expandedVendorId === vendor.id;
+                        const isEditing = editingVendorId === vendor.id;
+                        const accountsForVendor = [...(vendorMembersByVendorId.get(vendor.id) ?? [])].sort(
+                          (a, b) => a.display_name.localeCompare(b.display_name),
+                        );
                         return (
-                          <Fragment key={member.id}>
+                          <Fragment key={vendor.id}>
                             <tr
-                              onClick={() => setExpandedSuperadminId(isExpanded ? null : member.id)}
-                              className="hover:bg-primary/5 transition-colors cursor-pointer select-none"
+                              onClick={() => {
+                                if (isEditing) return;
+                                if (isExpanded) {
+                                  setExpandedVendorId(null);
+                                  setShowVendorMemberFormVendorId(null);
+                                } else {
+                                  setExpandedVendorId(vendor.id);
+                                  setShowVendorMemberFormVendorId(null);
+                                  setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
+                                }
+                              }}
+                              className="hover:bg-surface/30 transition-colors cursor-pointer select-none"
                             >
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm font-semibold text-gray-800">{member.display_name}</span>
-                                  <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
-                                    superadmin
-                                  </span>
-                                </div>
+                              <td className="px-5 py-4 text-sm font-semibold text-ink whitespace-nowrap">{vendor.name}</td>
+                              <td className="px-5 py-4 text-sm text-ink-muted font-mono whitespace-nowrap">{vendor.slug}</td>
+                              <td className="px-5 py-4 text-sm text-ink-muted whitespace-nowrap">{vendor.contact_email}</td>
+                              <td className="px-5 py-4 text-sm text-ink-muted whitespace-nowrap">{vendor.venmo_handle ?? '—'}</td>
+                              <td className="px-5 py-4 text-sm text-ink-muted whitespace-nowrap">{vendor.zelle_contact ?? '—'}</td>
+                              <td className="px-5 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                                  vendor.is_active
+                                    ? 'bg-green-50 text-green-700 border border-green-200'
+                                    : 'bg-surface text-ink-muted border border-line'
+                                }`}>
+                                  {vendor.is_active ? 'Active' : 'Inactive'}
+                                </span>
                               </td>
-                              <td className="px-6 py-4 text-right">
+                              <td className="px-5 py-4 text-right">
                                 <ChevronDown
-                                  size={18}
-                                  className={`ml-auto text-gray-400 transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}
+                                  size={16}
+                                  className={`ml-auto text-ink-faint transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                                 />
                               </td>
                             </tr>
+
                             {isExpanded && (
-                              <tr className="bg-primary/10">
-                                <td colSpan={2} className="px-6 py-5">
-                                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-sm">
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Display Name</dt>
-                                      <dd className="text-gray-700">{member.display_name}</dd>
+                              <tr className="bg-primary/[0.03]">
+                                <td colSpan={7} className="px-5 py-5">
+                                  <div className="space-y-6">
+                                    {isEditing ? (
+                                      <form onSubmit={(e) => handleVendorUpdate(e, vendor.id)} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                          {[
+                                            { label: 'Business name', key: 'name', type: 'text' },
+                                            { label: 'Slug', key: 'slug', type: 'text', mono: true },
+                                            { label: 'Contact email', key: 'contact_email', type: 'email' },
+                                            { label: 'Venmo handle', key: 'venmo_handle', type: 'text' },
+                                            { label: 'Zelle contact', key: 'zelle_contact', type: 'text' },
+                                          ].map(({ label, key, type, mono }) => (
+                                            <div key={key}>
+                                              <label className="block text-xs font-semibold uppercase tracking-wider text-ink-faint mb-1">{label}</label>
+                                              <input
+                                                type={type}
+                                                value={editVendorFormData[key as keyof typeof editVendorFormData]}
+                                                onChange={(e) => setEditVendorFormData({ ...editVendorFormData, [key]: e.target.value })}
+                                                required={['name', 'slug', 'contact_email'].includes(key)}
+                                                className={`w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white ${mono ? 'font-mono' : ''}`}
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <button
+                                            type="submit"
+                                            disabled={vendorUpdateLoading}
+                                            className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60"
+                                          >
+                                            {vendorUpdateLoading ? 'Saving...' : 'Save'}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={cancelVendorEdit}
+                                            className="px-4 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line"
+                                          >Cancel</button>
+                                        </div>
+                                      </form>
+                                    ) : (
+                                      <>
+                                        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+                                          {[
+                                            { label: 'Business Name', value: vendor.name },
+                                            { label: 'Slug', value: vendor.slug, mono: true },
+                                            { label: 'Contact Email', value: vendor.contact_email },
+                                            { label: 'Venmo Handle', value: vendor.venmo_handle ?? '—' },
+                                            { label: 'Zelle Contact', value: vendor.zelle_contact ?? '—' },
+                                            { label: 'Added On', value: new Date(vendor.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
+                                          ].map(({ label, value, mono }) => (
+                                            <div key={label}>
+                                              <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">{label}</dt>
+                                              <dd className={`text-ink-muted ${mono ? 'font-mono text-xs' : ''}`}>{value}</dd>
+                                            </div>
+                                          ))}
+                                        </dl>
+                                        <div className="flex gap-2 flex-wrap">
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); startVendorEdit(vendor); }}
+                                            className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90"
+                                          >Edit</button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleVendorToggleActive(vendor); }}
+                                            className="px-4 py-1.5 bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line border border-line"
+                                          >
+                                            {vendor.is_active ? 'Deactivate' : 'Activate'}
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendor/${vendor.slug}`); }}
+                                            className="px-4 py-1.5 bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line border border-line"
+                                          >View Panel</button>
+                                        </div>
+                                      </>
+                                    )}
+
+                                    <div className="border-t border-line pt-5">
+                                      <h4 className="text-xs font-bold text-ink uppercase tracking-wider mb-1">Vendor accounts</h4>
+                                      <p className="text-xs text-ink-muted mb-4">
+                                        Each staff member uses their own Clerk account.
+                                      </p>
+
+                                      {accountsForVendor.length > 0 && (
+                                        <div className="rounded-lg border border-line bg-white/70 mb-4 overflow-hidden">
+                                          <table className="w-full text-sm">
+                                            <thead className="bg-surface/50 border-b border-line">
+                                              <tr>
+                                                <th className="px-4 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint">Name</th>
+                                                <th className="px-4 py-2 text-left text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint">Clerk User ID</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-line">
+                                              {accountsForVendor.map((acc) => (
+                                                <tr key={acc.id}>
+                                                  <td className="px-4 py-2 font-medium text-ink text-sm">{acc.display_name}</td>
+                                                  <td className="px-4 py-2 font-mono text-xs text-ink-muted break-all">{acc.clerk_user_id}</td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+
+                                      {showVendorMemberFormVendorId === vendor.id ? (
+                                        <form
+                                          onSubmit={(e) => handleVendorMemberSubmit(e, vendor.id)}
+                                          className="rounded-xl border border-primary/25 bg-white p-4 space-y-3"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                              <label className="block text-xs font-semibold text-ink-muted mb-1">Display name</label>
+                                              <input
+                                                type="text"
+                                                value={vendorMemberFormData.display_name}
+                                                onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, display_name: e.target.value })}
+                                                required
+                                                className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                                placeholder="Jamie Lee"
+                                              />
+                                            </div>
+                                            <div>
+                                              <label className="block text-xs font-semibold text-ink-muted mb-1">Clerk User ID</label>
+                                              <input
+                                                type="text"
+                                                value={vendorMemberFormData.clerk_user_id}
+                                                onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, clerk_user_id: e.target.value })}
+                                                required
+                                                className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-mono"
+                                                placeholder="user_2..."
+                                              />
+                                            </div>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="submit"
+                                              disabled={vendorMemberFormLoading}
+                                              className="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60"
+                                            >
+                                              {vendorMemberFormLoading ? 'Adding...' : 'Add account'}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => resetVendorMemberForm()}
+                                              className="px-4 py-1.5 bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line"
+                                            >Cancel</button>
+                                          </div>
+                                        </form>
+                                      ) : (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
+                                            setShowVendorMemberFormVendorId(vendor.id);
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 border border-line bg-surface text-ink-muted text-xs font-semibold rounded-lg hover:bg-line transition-colors"
+                                        >
+                                          <Plus size={12} />
+                                          Add vendor account
+                                        </button>
+                                      )}
                                     </div>
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Clerk User ID</dt>
-                                      <dd className="font-mono text-gray-700 break-all">{member.clerk_user_id}</dd>
-                                    </div>
-                                    <div>
-                                      <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Added On</dt>
-                                      <dd className="text-gray-700">{addedOn}</dd>
-                                    </div>
-                                  </dl>
+                                  </div>
                                 </td>
                               </tr>
                             )}
@@ -956,363 +1243,164 @@ export default function AdminPanel() {
                       })}
                     </tbody>
                   </table>
-                )}
-              </div>
-            </section>
-
-            {/* ── Vendors section ──────────────────────────────────────────── */}
-            <section>
-              <div className="mb-6 flex justify-between items-center">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Vendors</h2>
-                  <p className="text-gray-600">
-                    Partner businesses on the platform. Open a row to manage the business and each vendor&apos;s separate sign-in accounts.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setShowVendorForm(!showVendorForm)}
-                  className="flex items-center gap-2 px-6 py-3"
-                >
-                  <Plus size={20} />
-                  {showVendorForm ? 'Cancel' : 'Add Vendor'}
-                </Button>
-              </div>
-
-              {showVendorForm && (
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 border border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">Add Vendor</h3>
-                  <form onSubmit={handleVendorSubmit} className="space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Business Name
-                        </label>
-                        <input
-                          type="text"
-                          value={vendorFormData.name}
-                          onChange={(e) => {
-                            const name = e.target.value;
-                            setVendorFormData({ ...vendorFormData, name, slug: toSlug(name) });
-                          }}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                          placeholder="Fresh Kitchen Co."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Slug
-                        </label>
-                        <input
-                          type="text"
-                          value={vendorFormData.slug}
-                          onChange={(e) => setVendorFormData({ ...vendorFormData, slug: e.target.value })}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all font-mono text-sm"
-                          placeholder="fresh-kitchen-co"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Contact Email
-                      </label>
-                      <input
-                        type="email"
-                        value={vendorFormData.contact_email}
-                        onChange={(e) => setVendorFormData({ ...vendorFormData, contact_email: e.target.value })}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                        placeholder="owner@freshkitchen.com"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Venmo Handle
-                        </label>
-                        <input
-                          type="text"
-                          value={vendorFormData.venmo_handle}
-                          onChange={(e) => setVendorFormData({ ...vendorFormData, venmo_handle: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                          placeholder="@FreshKitchen"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Zelle Contact
-                        </label>
-                        <input
-                          type="text"
-                          value={vendorFormData.zelle_contact}
-                          onChange={(e) => setVendorFormData({ ...vendorFormData, zelle_contact: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
-                          placeholder="owner@freshkitchen.com or phone"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 pt-2">
-                      <Button type="submit" className="px-8 py-3" disabled={vendorFormLoading}>
-                        {vendorFormLoading ? 'Adding...' : 'Add Vendor'}
-                      </Button>
-                      <Button type="button" variant="secondary" onClick={resetVendorForm} className="px-8 py-3">
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
                 </div>
               )}
+            </div>
+          </div>
+        )}
 
-              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                {vendors.length === 0 ? (
-                  <div className="p-16 text-center">
-                    <p className="text-gray-500 text-lg">No vendors yet. Add one to get started.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
-                        <tr>
-                          {['Name', 'Slug', 'Contact Email', 'Venmo', 'Zelle', 'Status'].map((h) => (
-                            <th key={h} className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-left">{h}</th>
-                          ))}
-                          <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 text-right">Details</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {vendors.map((vendor) => {
-                          const isExpanded = expandedVendorId === vendor.id;
-                          const isEditing = editingVendorId === vendor.id;
-                          const accountsForVendor = [...(vendorMembersByVendorId.get(vendor.id) ?? [])].sort(
-                            (a, b) => a.display_name.localeCompare(b.display_name),
-                          );
-                          return (
-                            <Fragment key={vendor.id}>
-                              <tr
-                                onClick={() => {
-                                  if (isEditing) return;
-                                  if (isExpanded) {
-                                    setExpandedVendorId(null);
-                                    setShowVendorMemberFormVendorId(null);
-                                  } else {
-                                    setExpandedVendorId(vendor.id);
-                                    setShowVendorMemberFormVendorId(null);
-                                    setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
-                                  }
-                                }}
-                                className="hover:bg-primary/5 transition-colors cursor-pointer select-none"
-                              >
-                                <td className="px-6 py-4 text-sm font-semibold text-gray-900">{vendor.name}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600 font-mono">{vendor.slug}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{vendor.contact_email}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{vendor.venmo_handle ?? '—'}</td>
-                                <td className="px-6 py-4 text-sm text-gray-600">{vendor.zelle_contact ?? '—'}</td>
-                                <td className="px-6 py-4">
-                                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${vendor.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                    {vendor.is_active ? 'Active' : 'Inactive'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <ChevronDown size={18} className={`ml-auto text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                                </td>
-                              </tr>
-
-                              {isExpanded && (
-                                <tr className="bg-primary/10">
-                                  <td colSpan={7} className="px-6 py-5">
-                                    <div className="space-y-8">
-                                      {isEditing ? (
-                                        <form onSubmit={(e) => handleVendorUpdate(e, vendor.id)} className="space-y-4">
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Business Name</label>
-                                              <input type="text" value={editVendorFormData.name} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, name: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-                                            </div>
-                                            <div>
-                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Slug</label>
-                                              <input type="text" value={editVendorFormData.slug} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, slug: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none font-mono" />
-                                            </div>
-                                            <div>
-                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Contact Email</label>
-                                              <input type="email" value={editVendorFormData.contact_email} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, contact_email: e.target.value })} required className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-                                            </div>
-                                            <div>
-                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Venmo Handle</label>
-                                              <input type="text" value={editVendorFormData.venmo_handle} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, venmo_handle: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-                                            </div>
-                                            <div>
-                                              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Zelle Contact</label>
-                                              <input type="text" value={editVendorFormData.zelle_contact} onChange={(e) => setEditVendorFormData({ ...editVendorFormData, zelle_contact: e.target.value })} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
-                                            </div>
-                                          </div>
-                                          <div className="flex gap-2 pt-1">
-                                            <Button type="submit" className="px-5 py-2 text-sm" disabled={vendorUpdateLoading}>
-                                              {vendorUpdateLoading ? 'Saving...' : 'Save'}
-                                            </Button>
-                                            <Button type="button" variant="secondary" className="px-5 py-2 text-sm" onClick={cancelVendorEdit}>
-                                              Cancel
-                                            </Button>
-                                          </div>
-                                        </form>
-                                      ) : (
-                                        <>
-                                          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-10 gap-y-3 text-sm mb-5">
-                                            <div>
-                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Business Name</dt>
-                                              <dd className="text-gray-700">{vendor.name}</dd>
-                                            </div>
-                                            <div>
-                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Slug</dt>
-                                              <dd className="font-mono text-gray-700">{vendor.slug}</dd>
-                                            </div>
-                                            <div>
-                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Contact Email</dt>
-                                              <dd className="text-gray-700">{vendor.contact_email}</dd>
-                                            </div>
-                                            <div>
-                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Venmo Handle</dt>
-                                              <dd className="text-gray-700">{vendor.venmo_handle ?? '—'}</dd>
-                                            </div>
-                                            <div>
-                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Zelle Contact</dt>
-                                              <dd className="text-gray-700">{vendor.zelle_contact ?? '—'}</dd>
-                                            </div>
-                                            <div>
-                                              <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-0.5">Added On</dt>
-                                              <dd className="text-gray-700">{new Date(vendor.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</dd>
-                                            </div>
-                                          </dl>
-                                          <div className="flex gap-2 flex-wrap">
-                                            <Button className="px-5 py-2 text-sm" onClick={(e) => { e.stopPropagation(); startVendorEdit(vendor); }}>
-                                              Edit
-                                            </Button>
-                                            <Button
-                                              variant="secondary"
-                                              className="px-5 py-2 text-sm"
-                                              onClick={(e) => { e.stopPropagation(); handleVendorToggleActive(vendor); }}
-                                            >
-                                              {vendor.is_active ? 'Deactivate' : 'Activate'}
-                                            </Button>
-                                            <Button
-                                              variant="secondary"
-                                              className="px-5 py-2 text-sm"
-                                              onClick={(e) => { e.stopPropagation(); navigate(`/admin/vendor/${vendor.slug}`); }}
-                                            >
-                                              View Panel
-                                            </Button>
-                                          </div>
-                                        </>
-                                      )}
-
-                                      <div className="border-t border-gray-200 pt-6">
-                                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">
-                                          Vendor accounts
-                                        </h4>
-                                        <p className="text-sm text-gray-600 mb-4">
-                                          Each staff member signs in with their own Clerk account. Add one row per person — do not reuse a single &quot;master&quot; login for everyone.
-                                        </p>
-
-                                        {accountsForVendor.length > 0 ? (
-                                          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white/80 mb-4">
-                                            <table className="w-full text-sm">
-                                              <thead className="bg-gray-50 border-b border-gray-100">
-                                                <tr>
-                                                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
-                                                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Clerk User ID</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody className="divide-y divide-gray-100">
-                                                {accountsForVendor.map((acc) => (
-                                                  <tr key={acc.id}>
-                                                    <td className="px-4 py-2 font-medium text-gray-900">{acc.display_name}</td>
-                                                    <td className="px-4 py-2 font-mono text-xs text-gray-700 break-all">{acc.clerk_user_id}</td>
-                                                  </tr>
-                                                ))}
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        ) : (
-                                          <p className="text-sm text-gray-500 mb-4">No vendor accounts yet for this business.</p>
-                                        )}
-
-                                        {showVendorMemberFormVendorId === vendor.id ? (
-                                          <form
-                                            onSubmit={(e) => handleVendorMemberSubmit(e, vendor.id)}
-                                            className="rounded-xl border border-primary/30 bg-white p-5 space-y-4"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                              <div>
-                                                <label className="block text-xs font-semibold text-gray-700 mb-1">Display name</label>
-                                                <input
-                                                  type="text"
-                                                  value={vendorMemberFormData.display_name}
-                                                  onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, display_name: e.target.value })}
-                                                  required
-                                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                                                  placeholder="Jamie Lee"
-                                                />
-                                              </div>
-                                              <div>
-                                                <label className="block text-xs font-semibold text-gray-700 mb-1">Clerk User ID</label>
-                                                <input
-                                                  type="text"
-                                                  value={vendorMemberFormData.clerk_user_id}
-                                                  onChange={(e) => setVendorMemberFormData({ ...vendorMemberFormData, clerk_user_id: e.target.value })}
-                                                  required
-                                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none font-mono"
-                                                  placeholder="user_2..."
-                                                />
-                                              </div>
-                                            </div>
-                                            <div className="flex gap-2 flex-wrap">
-                                              <Button type="submit" className="px-5 py-2 text-sm" disabled={vendorMemberFormLoading}>
-                                                {vendorMemberFormLoading ? 'Adding...' : 'Add account'}
-                                              </Button>
-                                              <Button
-                                                type="button"
-                                                variant="secondary"
-                                                className="px-5 py-2 text-sm"
-                                                onClick={() => resetVendorMemberForm()}
-                                              >
-                                                Cancel
-                                              </Button>
-                                            </div>
-                                          </form>
-                                        ) : (
-                                          <Button
-                                            type="button"
-                                            variant="secondary"
-                                            className="px-5 py-2 text-sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setVendorMemberFormData({ clerk_user_id: '', display_name: '' });
-                                              setShowVendorMemberFormVendorId(vendor.id);
-                                            }}
-                                          >
-                                            <Plus size={16} className="inline mr-1.5 -mt-0.5" />
-                                            Add vendor account
-                                          </Button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </Fragment>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+        {/* ════════════════════════════════════════════════════════════════
+            TEAM TAB
+        ════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'team' && (
+          <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-ink font-body">Super admins</h2>
+                <p className="text-sm text-ink-muted mt-0.5">
+                  Full access to this platform
+                </p>
               </div>
-            </section>
+              <button
+                onClick={() => setShowSuperadminForm(!showSuperadminForm)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={15} />
+                {showSuperadminForm ? 'Cancel' : 'Add super admin'}
+              </button>
+            </div>
 
+            {showSuperadminForm && (
+              <div className="bg-white rounded-xl border border-line shadow-sm p-6">
+                <h3 className="text-base font-bold text-ink mb-1">Add super admin</h3>
+                <p className="text-xs text-ink-muted mb-4">
+                  Create the user in Clerk, then paste their Clerk user ID here. Each person is a separate account.
+                </p>
+                <form onSubmit={handleSuperadminSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Display name</label>
+                      <input
+                        type="text"
+                        value={superadminFormData.display_name}
+                        onChange={(e) => setSuperadminFormData({ ...superadminFormData, display_name: e.target.value })}
+                        required
+                        className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                        placeholder="Alex Chen"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-ink-muted mb-1.5">Clerk User ID</label>
+                      <input
+                        type="text"
+                        value={superadminFormData.clerk_user_id}
+                        onChange={(e) => setSuperadminFormData({ ...superadminFormData, clerk_user_id: e.target.value })}
+                        required
+                        className="w-full px-3 py-2 text-sm border border-line rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-mono"
+                        placeholder="user_2abc..."
+                      />
+                      <p className="mt-1 text-[10.5px] text-ink-faint">Clerk Dashboard → Users → copy User ID</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={superadminFormLoading}
+                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60"
+                    >
+                      {superadminFormLoading ? 'Adding...' : 'Add super admin'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetSuperadminForm}
+                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line"
+                    >Cancel</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
+              {superadmins.length === 0 ? (
+                <div className="p-16 text-center">
+                  <p className="text-ink-muted text-sm">No super admins yet. Add one to get started.</p>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-line">
+                      <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 text-left">Name</th>
+                      <th className="px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 text-right">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {superadmins.map((member) => {
+                      const isExpanded = expandedSuperadminId === member.id;
+                      const addedOn = new Date(member.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                      });
+                      return (
+                        <Fragment key={member.id}>
+                          <tr
+                            onClick={() => setExpandedSuperadminId(isExpanded ? null : member.id)}
+                            className="hover:bg-surface/30 transition-colors cursor-pointer select-none"
+                          >
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[11px] flex items-center justify-center shrink-0">
+                                  {member.display_name.split(' ').map(s => s[0]).join('')}
+                                </div>
+                                <span className="text-sm font-semibold text-ink">{member.display_name}</span>
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[9.5px] font-semibold bg-primary/10 text-primary">superadmin</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              <ChevronDown
+                                size={16}
+                                className={`ml-auto text-ink-faint transition-transform duration-200 inline-block ${isExpanded ? 'rotate-180' : ''}`}
+                              />
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-primary/[0.03]">
+                              <td colSpan={2} className="px-5 py-4">
+                                <dl className="grid grid-cols-1 sm:grid-cols-3 gap-x-8 gap-y-3 text-sm">
+                                  <div>
+                                    <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">Display Name</dt>
+                                    <dd className="text-ink-muted">{member.display_name}</dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">Clerk User ID</dt>
+                                    <dd className="font-mono text-xs text-ink-muted break-all">{member.clerk_user_id}</dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-faint mb-0.5">Added On</dt>
+                                    <dd className="text-ink-muted">{addedOn}</dd>
+                                  </div>
+                                </dl>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════
+            PAYOUTS TAB
+        ════════════════════════════════════════════════════════════════ */}
+        {activeTab === 'payouts' && (
+          <div className="flex flex-col items-center justify-center min-h-[400px] text-center px-6">
+            <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mb-4">
+              <MoreHorizontal size={22} className="text-ink-faint" />
+            </div>
+            <h3 className="text-base font-semibold text-ink mb-1">Payouts</h3>
+            <p className="text-sm text-ink-muted">Coming soon</p>
           </div>
         )}
       </main>

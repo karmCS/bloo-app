@@ -96,6 +96,7 @@ export interface Meal {
   ingredients: string[];
   dietary_tags: string[];
   vendor_id?: string | null;
+  is_meal_of_week?: boolean;
   created_at: string;
   updated_at: string;
 }

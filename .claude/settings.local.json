@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:api.anthropic.com)"
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(mkdir -p /tmp/bloo-design)",
+      "Read(//tmp/**)",
+      "Bash(tar -xf \"C:/Users/mark3/.claude/projects/C--Users-mark3-projects-bloo-app/d3e92dd8-e24d-4248-9525-37b14d1d4704/tool-results/webfetch-1776463970175-639nqa.bin\")",
+      "Read(//c/Users/mark3/.claude/projects//**)",
+      "Read(//c/Users/mark3/**)",
+      "Bash(tar -xf /c/Users/mark3/.claude/projects/c--Users-mark3-projects-bloo-app/d3e92dd8-e24d-4248-9525-37b14d1d4704/tool-results/webfetch-1776463970175-639nqa.bin)",
+      "Bash(npx tsc *)"
     ]
   }
 }

@@ -62,6 +62,8 @@ export default function CheckoutPage() {
             total_price: totalPrice,
             payment_method: 'card',
             status: 'pending',
+            vendor_id: items[0]?.meal.vendor_id ?? null,
+            order_status: 'new',
           },
         ])
         .select()

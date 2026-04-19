@@ -9,7 +9,8 @@ export function useMeals() {
   const fetchMeals = useCallback(async () => {
     const { data, error } = await supabase
       .from('meals')
-      .select('*')
+      .select('*, vendors!inner(is_active)')
+      .eq('vendors.is_active', true)
       .order('created_at', { ascending: false });
 
     if (error) {

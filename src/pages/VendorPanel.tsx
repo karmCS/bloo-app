@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useClerk, useUser, useSession, UserProfile } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
-import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
-import { Trash2, Plus, LogOut, UtensilsCrossed, UserCog, ChevronLeft } from 'lucide-react';
+import { Trash2, Plus, ChevronLeft, MoreHorizontal } from 'lucide-react';
+
+type VendorTab = 'pass' | 'menu' | 'analytics' | 'payouts' | 'settings';
 
 export default function VendorPanel() {
   const { slug } = useParams<{ slug: string }>();
@@ -19,6 +20,7 @@ export default function VendorPanel() {
   const [vendorName, setVendorName] = useState<string | null>(null);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [pageReady, setPageReady] = useState(false);
+  const [activeTab, setActiveTab] = useState<VendorTab>('menu');
 
   // ── Meals state ───────────────────────────────────────────────────────────
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -50,7 +52,6 @@ export default function VendorPanel() {
     const init = async () => {
       const authedSupabase = await getSupabaseWithAuth(session);
 
-      // Resolve vendor by slug
       const { data: vendor } = await authedSupabase
         .from('vendors')
         .select('id, name')
@@ -62,7 +63,6 @@ export default function VendorPanel() {
         return;
       }
 
-      // Verify this Clerk user belongs to this vendor (or is a superadmin)
       const { data: vendorUser } = await authedSupabase
         .from('vendor_users')
         .select('role, vendor_id')
@@ -82,7 +82,6 @@ export default function VendorPanel() {
       setVendorId(vendor.id);
       setVendorName(vendor.name);
 
-      // Fetch meals scoped to this vendor
       const { data: mealsData } = await authedSupabase
         .from('meals')
         .select('*')
@@ -209,7 +208,7 @@ export default function VendorPanel() {
       if (error) throw error;
       setConfirmDeleteId(null);
       await refetchMeals();
-    } catch (error) {
+    } catch {
       alert('Failed to delete meal. Please try again.');
     }
   };
@@ -232,299 +231,414 @@ export default function VendorPanel() {
     setShowForm(false);
   };
 
+  const initials = user?.firstName && user?.lastName
+    ? `${user.firstName[0]}${user.lastName[0]}`
+    : user?.firstName?.[0] ?? '?';
+
   // ── Loading state ─────────────────────────────────────────────────────────
   if (!pageReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/20 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
       </div>
     );
   }
 
+  const TABS: { key: VendorTab; label: string }[] = [
+    { key: 'pass', label: 'Pass' },
+    { key: 'menu', label: 'Menu' },
+    { key: 'analytics', label: 'Analytics' },
+    { key: 'payouts', label: 'Payouts' },
+    { key: 'settings', label: 'Settings' },
+  ];
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/20">
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => navigate('/')}
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-              >
-                <UtensilsCrossed className="text-primary" size={28} />
-                <div className="text-left">
-                  <h1 className="text-2xl font-bold text-primary font-brand tracking-wide">bloo</h1>
-                  <p className="text-xs text-gray-500 uppercase tracking-wider">Vendor Portal</p>
-                  {vendorName && (
-                    <p className="text-xs text-primary font-medium mt-0.5">Welcome, {vendorName}</p>
-                  )}
-                </div>
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Button variant="secondary" onClick={() => setShowProfile(true)}>
-                <UserCog size={18} className="mr-2" />
-                Manage Account
-              </Button>
-              {isSuperadmin && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="inline-flex shrink-0 items-center gap-1 px-3 py-2 text-sm"
-                  onClick={() => navigate('/admin')}
-                >
-                  <ChevronLeft size={18} className="shrink-0" aria-hidden />
-                  Admin panel
-                </Button>
-              )}
-              <Button variant="secondary" onClick={() => signOut({ redirectUrl: '/' })}>
-                <LogOut size={18} className="mr-2" />
-                Logout
-              </Button>
-            </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <header className="bg-white border-b border-line px-6 py-0 flex items-center gap-5 h-[68px] shrink-0">
+        {/* Brand + vendor */}
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={() => navigate('/')}
+            className="font-brand text-2xl font-semibold text-primary tracking-tight hover:opacity-80 transition-opacity"
+          >
+            bloo
+          </button>
+          <div className="w-px h-6 bg-line" />
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-ink text-[15px]">{vendorName}</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+              kitchen open
+            </span>
           </div>
         </div>
+
+        {/* Nav */}
+        <nav className="flex gap-1 ml-8 h-full">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`px-4 text-[13px] font-medium border-b-2 transition-colors h-full ${
+                activeTab === t.key
+                  ? 'border-primary text-ink font-semibold'
+                  : 'border-transparent text-ink-muted hover:text-ink'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex-1" />
+
+        {/* Stats */}
+        <div className="hidden lg:flex items-center gap-6 text-right">
+          <div>
+            <div className="text-[9.5px] uppercase tracking-wider font-label text-ink-faint font-semibold">Meals live</div>
+            <div className="font-brand text-xl font-semibold text-ink leading-tight">{meals.length}</div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <button
+          onClick={() => { setShowForm(true); setActiveTab('menu'); }}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white text-[13px] font-semibold rounded-lg hover:bg-primary/90 transition-colors shrink-0"
+        >
+          <Plus size={14} />
+          New meal
+        </button>
+
+        {isSuperadmin && (
+          <button
+            onClick={() => navigate('/admin')}
+            className="flex items-center gap-1 px-3 py-2 text-[13px] font-medium text-ink-muted border border-line rounded-lg hover:bg-surface transition-colors shrink-0"
+          >
+            <ChevronLeft size={14} />
+            Admin
+          </button>
+        )}
+
+        <button
+          onClick={() => setShowProfile(true)}
+          className="w-8 h-8 rounded-full bg-primary/15 text-primary font-bold text-[12px] flex items-center justify-center shrink-0 hover:bg-primary/25 transition-colors"
+        >
+          {initials}
+        </button>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 font-sans mb-1">Manage Meals</h2>
-            <p className="text-gray-600">Create and manage your menu</p>
-          </div>
-          <Button
-            onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 px-6 py-3"
-          >
-            <Plus size={20} />
-            {showForm ? 'Cancel' : 'Add New Meal'}
-          </Button>
-        </div>
+      {/* ── Body ──────────────────────────────────────────────────────────── */}
+      <main className="flex-1 overflow-auto">
 
-        {/* ── Meal form ──────────────────────────────────────────────────── */}
-        {showForm && (
-          <div className="mx-auto mb-8 max-w-5xl rounded-xl border border-gray-200/80 bg-white p-5 shadow-md sm:p-6">
-            <h3 className="mb-4 font-sans text-lg font-bold tracking-tight text-gray-900">
-              {editingMeal ? 'Edit Meal' : 'Add New Meal'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-8">
-                <div className="space-y-4 lg:col-span-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Meal image
-                    </label>
-                    <ImageUpload
-                      onImageSelect={(file) => setUploadedFile(file)}
-                      currentImageUrl={formData.image_url}
-                      onImageRemove={() => {
-                        setUploadedFile(null);
-                        setFormData({ ...formData, image_url: '' });
-                      }}
-                      disabled={isUploading}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Meal name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-snug text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                      placeholder="Grilled Salmon Bowl"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Price (USD)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      required
-                      className="w-full max-w-[11rem] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                      placeholder="12.99"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4 lg:col-span-8">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Description <span className="font-normal normal-case text-gray-400">(optional)</span>
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => {
-                        if (e.target.value.length <= 500)
-                          setFormData({ ...formData, description: e.target.value });
-                      }}
-                      rows={2}
-                      maxLength={500}
-                      className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                      placeholder="Highlight what makes this meal special..."
-                    />
-                    <div className="mt-1 flex justify-end">
-                      <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-gray-500'}`}>
-                        {formData.description.length}/500
+        {/* ── Pass tab: orders kanban ──────────────────────────────────── */}
+        {activeTab === 'pass' && (
+          <div className="h-full flex flex-col">
+            <div className="flex-1 grid grid-cols-4 gap-3.5 p-6 overflow-auto">
+              {(['New', 'In the pass', 'Ready', 'Picked up'] as const).map((col) => (
+                <div key={col} className="flex flex-col gap-2.5">
+                  <div className="flex items-center gap-2 px-1">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11.5px] font-semibold ${
+                      col === 'New' ? 'bg-primary/10 text-primary' :
+                      col === 'In the pass' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                      col === 'Ready' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      'bg-surface text-ink-muted'
+                    }`}>{col}</span>
+                    <span className="text-[11.5px] text-ink-faint">0</span>
+                    {col === 'New' && (
+                      <span className="ml-auto flex items-center gap-1 text-[10.5px] text-primary font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block" />
+                        live
                       </span>
-                    </div>
+                    )}
                   </div>
-
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Nutrition
-                    </label>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
-                        <div key={field}>
-                          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                            {field === 'calories' ? 'Cal' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
-                          </label>
-                          <input
-                            type="number"
-                            value={formData[field]}
-                            onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                            required
-                            className="w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm tabular-nums text-gray-900 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Ingredients <span className="font-normal normal-case text-gray-400">(comma-separated)</span>
-                    </label>
-                    <textarea
-                      value={formData.ingredients}
-                      onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                      required
-                      rows={3}
-                      className="w-full resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                      placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Dietary tags <span className="font-normal normal-case text-gray-400">(optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dietary_tags}
-                      onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
-                      placeholder="keto, gluten-free, high-protein"
-                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
-                    />
+                  <div
+                    className="p-6 border-2 border-dashed border-line rounded-xl text-center text-[11.5px] text-ink-faint"
+                  >
+                    No tickets yet
                   </div>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
-                <Button type="submit" className="px-5 py-2 text-sm" disabled={isUploading}>
-                  {isUploading ? 'Uploading...' : editingMeal ? 'Update Meal' : 'Add Meal'}
-                </Button>
-                <Button type="button" variant="secondary" onClick={resetForm} className="px-5 py-2 text-sm" disabled={isUploading}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* ── Meals table ────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-          {meals.length === 0 ? (
-            <div className="p-16 text-center">
-              <UtensilsCrossed className="mx-auto text-gray-300 mb-4" size={64} />
-              <p className="text-gray-500 text-lg">No meals yet. Click "Add New Meal" to get started.</p>
+        {/* ── Menu tab: meal management ────────────────────────────────── */}
+        {activeTab === 'menu' && (
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-ink font-body">Menu</h2>
+                <p className="text-sm text-ink-muted mt-0.5">
+                  {meals.length} meal{meals.length !== 1 ? 's' : ''} on your menu
+                </p>
+              </div>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={15} />
+                {showForm ? 'Cancel' : 'Add meal'}
+              </button>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-primary/10 to-primary/20 border-b border-gray-200">
-                  <tr>
-                    {['Meal', 'Price', 'Macros', 'Actions'].map((h) => (
-                      <th
-                        key={h}
-                        className={`px-6 py-4 text-xs font-semibold uppercase tracking-wider text-gray-700 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {meals.map((meal) => (
-                    <tr key={meal.id} className="hover:bg-primary/5 transition-colors">
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <img
-                            src={meal.image_url}
-                            alt={meal.name}
-                            className="w-16 h-16 rounded-lg object-cover mr-4 border border-gray-200"
-                          />
-                          <div className="text-base font-bold text-gray-900 font-sans">{meal.name}</div>
+
+            {/* Meal form */}
+            {showForm && (
+              <div className="bg-white rounded-xl border border-line shadow-sm p-6 mb-6">
+                <h3 className="text-base font-bold text-ink mb-4">
+                  {editingMeal ? 'Edit meal' : 'Add new meal'}
+                </h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-6 lg:grid-cols-12 lg:items-start lg:gap-8">
+                    <div className="space-y-4 lg:col-span-4">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Meal image
+                        </label>
+                        <ImageUpload
+                          onImageSelect={(file) => setUploadedFile(file)}
+                          currentImageUrl={formData.image_url}
+                          onImageRemove={() => {
+                            setUploadedFile(null);
+                            setFormData({ ...formData, image_url: '' });
+                          }}
+                          disabled={isUploading}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Meal name
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          placeholder="Grilled Salmon Bowl"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Price (USD)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          required
+                          className="w-full max-w-[11rem] rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          placeholder="12.99"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 lg:col-span-8">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Description <span className="font-normal normal-case text-ink-faint">(optional)</span>
+                        </label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 500)
+                              setFormData({ ...formData, description: e.target.value });
+                          }}
+                          rows={2}
+                          maxLength={500}
+                          className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          placeholder="Highlight what makes this meal special..."
+                        />
+                        <div className="mt-1 flex justify-end">
+                          <span className={`text-xs font-medium ${formData.description.length > 450 ? 'text-orange-600' : 'text-ink-faint'}`}>
+                            {formData.description.length}/500
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                        ${meal.price.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-700 font-medium">
-                        {meal.calories} cal | {meal.protein}g P | {meal.carbs}g C | {meal.fats}g F
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
-                        {confirmDeleteId === meal.id ? (
-                          <div className="flex items-center justify-end gap-3">
-                            <span className="text-gray-600 text-sm font-semibold">Delete this meal?</span>
-                            <button
-                              onClick={() => handleDelete(meal.id)}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                            >
-                              Delete
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-3">
-                            <button
-                              onClick={() => handleEdit(meal)}
-                              className="px-4 py-2 bg-primary/15 text-primary rounded-lg hover:bg-primary/25 transition-colors font-semibold"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(meal.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={20} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Nutrition
+                        </label>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                          {(['calories', 'protein', 'carbs', 'fats'] as const).map((field) => (
+                            <div key={field}>
+                              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-ink-faint">
+                                {field === 'calories' ? 'Cal' : `${field.charAt(0).toUpperCase() + field.slice(1)} (g)`}
+                              </label>
+                              <input
+                                type="number"
+                                value={formData[field]}
+                                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                                required
+                                className="w-full rounded-lg border border-line bg-white px-2.5 py-2 text-sm tabular-nums text-ink shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Ingredients <span className="font-normal normal-case text-ink-faint">(comma-separated)</span>
+                        </label>
+                        <textarea
+                          value={formData.ingredients}
+                          onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+                          required
+                          rows={3}
+                          className="w-full resize-none rounded-lg border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          placeholder="Wild salmon, quinoa, avocado, cherry tomatoes, lemon"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                          Dietary tags <span className="font-normal normal-case text-ink-faint">(optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.dietary_tags}
+                          onChange={(e) => setFormData({ ...formData, dietary_tags: e.target.value })}
+                          placeholder="keto, gluten-free, high-protein"
+                          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 border-t border-line pt-4">
+                    <button
+                      type="submit"
+                      disabled={isUploading}
+                      className="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {isUploading ? 'Uploading...' : editingMeal ? 'Update meal' : 'Add meal'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      disabled={isUploading}
+                      className="px-5 py-2 bg-surface text-ink-muted text-sm font-semibold rounded-lg hover:bg-line transition-colors disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Meals table */}
+            <div className="bg-white rounded-xl border border-line shadow-sm overflow-hidden">
+              {meals.length === 0 ? (
+                <div className="p-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mx-auto mb-4">
+                    <Plus size={24} className="text-ink-faint" />
+                  </div>
+                  <p className="text-ink-muted text-sm">No meals yet. Add your first meal above.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-line">
+                        {['Meal', 'Price', 'Macros', 'Actions'].map((h) => (
+                          <th
+                            key={h}
+                            className={`px-5 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint bg-surface/50 ${h === 'Actions' ? 'text-right' : 'text-left'}`}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {meals.map((meal) => (
+                        <tr key={meal.id} className="hover:bg-surface/30 transition-colors">
+                          <td className="px-5 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={meal.image_url}
+                                alt={meal.name}
+                                className="w-12 h-12 rounded-lg object-cover border border-line shrink-0"
+                              />
+                              <span className="text-sm font-semibold text-ink">{meal.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-ink tabular-nums">
+                            ${meal.price.toFixed(2)}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-xs text-ink-muted font-medium tabular-nums">
+                            {meal.calories} cal · {meal.protein}g P · {meal.carbs}g C · {meal.fats}g F
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {confirmDeleteId === meal.id ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-ink-muted text-xs font-medium">Delete?</span>
+                                <button
+                                  onClick={() => handleDelete(meal.id)}
+                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-3 py-1.5 bg-surface text-ink-muted text-xs rounded-lg hover:bg-line transition-colors font-medium"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleEdit(meal)}
+                                  className="px-3 py-1.5 bg-primary/10 text-primary text-xs rounded-lg hover:bg-primary/20 transition-colors font-semibold"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDeleteId(meal.id)}
+                                  className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* ── Placeholder tabs ─────────────────────────────────────────── */}
+        {(activeTab === 'analytics' || activeTab === 'payouts' || activeTab === 'settings') && (
+          <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center px-6">
+            <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mb-4">
+              <MoreHorizontal size={22} className="text-ink-faint" />
+            </div>
+            <h3 className="text-base font-semibold text-ink mb-1 capitalize">{activeTab}</h3>
+            <p className="text-sm text-ink-muted">Coming soon</p>
+          </div>
+        )}
       </main>
+
+      {/* ── Logout footer ─────────────────────────────────────────────────── */}
+      <div className="border-t border-line bg-white px-6 py-3 flex items-center justify-end gap-3">
+        <button
+          onClick={() => signOut({ redirectUrl: '/' })}
+          className="text-xs text-ink-muted hover:text-ink font-medium transition-colors"
+        >
+          Sign out
+        </button>
+      </div>
 
       {/* ── Clerk UserProfile modal ───────────────────────────────────────── */}
       {showProfile && (

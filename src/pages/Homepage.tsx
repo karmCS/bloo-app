@@ -18,6 +18,8 @@ export default function Homepage() {
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  const mealOfTheWeek = useMemo(() => meals.find((m) => m.is_meal_of_week) ?? null, [meals]);
+
   const filteredMeals = useMemo(() => {
     if (!selectedVendorId) return meals;
     return meals.filter((m) => m.vendor_id === selectedVendorId);
@@ -216,7 +218,61 @@ export default function Homepage() {
             </div>
           ) : (
             <>
-              {filteredMeals.length > 0 && (
+              {/* Meal of the week hero */}
+              {mealOfTheWeek && (
+                <div
+                  className="relative rounded-2xl overflow-hidden mb-8 cursor-pointer group shadow-lg border border-line/60"
+                  style={{ height: '320px' }}
+                  onClick={() => handleMealClick(mealOfTheWeek)}
+                >
+                  <img
+                    src={mealOfTheWeek.image_url}
+                    alt={mealOfTheWeek.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                  {/* Deep dual-tone gradient: rich left, transparent right */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/10" />
+                  {/* Subtle warm vignette at bottom */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+
+                  <div className="absolute inset-0 flex flex-col justify-between p-7 sm:p-9">
+                    {/* Top label */}
+                    <div className="flex items-center gap-2 w-fit">
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-amber-400/90 text-amber-950 backdrop-blur-sm shadow-md">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        Meal of the week
+                      </span>
+                    </div>
+
+                    {/* Bottom content */}
+                    <div className="max-w-lg">
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {mealOfTheWeek.dietary_tags.slice(0, 3).map((tag, i) => (
+                          <span key={i} className="px-2.5 py-0.5 bg-white/10 backdrop-blur-sm text-white/90 text-[10.5px] font-semibold rounded-full border border-white/20 tracking-wide">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <h2 className="text-3xl sm:text-4xl font-bold text-white mb-1.5 font-brand leading-tight drop-shadow-md tracking-tight">
+                        {mealOfTheWeek.name}
+                      </h2>
+                      <p className="text-white/70 text-sm mb-5 font-medium">by {mealOfTheWeek.vendor}</p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl font-bold text-white font-brand">${mealOfTheWeek.price.toFixed(2)}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleMealClick(mealOfTheWeek); }}
+                          className="px-5 py-2.5 bg-white text-ink text-sm font-bold rounded-xl hover:bg-white/90 transition-all duration-200 shadow-lg"
+                        >
+                          Order now
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback hero when no meal of the week is set */}
+              {!mealOfTheWeek && filteredMeals.length > 0 && (
                 <div
                   className="relative rounded-2xl overflow-hidden mb-8 cursor-pointer group shadow-md border border-line/80"
                   style={{ height: '280px' }}
@@ -237,10 +293,10 @@ export default function Homepage() {
                           </span>
                         ))}
                       </div>
-                      <h2 className="text-3xl font-bold text-white mb-1 font-sans leading-tight drop-shadow-md">
+                      <h2 className="text-3xl font-bold text-white mb-1 font-brand leading-tight drop-shadow-md">
                         {filteredMeals[0].name}
                       </h2>
-                      <p className="text-white/90 text-sm mb-4 font-sans font-normal">by {filteredMeals[0].vendor}</p>
+                      <p className="text-white/90 text-sm mb-4 font-medium">by {filteredMeals[0].vendor}</p>
                       <div className="flex items-center gap-4">
                         <span className="text-2xl font-bold text-white">${filteredMeals[0].price.toFixed(2)}</span>
                         <button

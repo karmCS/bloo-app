@@ -56,11 +56,49 @@ export default function AdminPanel() {
   const [isUploading, setIsUploading] = useState(false);
   const [mealsVendorFilterId, setMealsVendorFilterId] = useState<string | null>(null);
   const [activeVendors, setActiveVendors] = useState<{ id: string; name: string }[]>([]);
+  const [showMacroModal, setShowMacroModal] = useState(false);
+  const [macroInput, setMacroInput] = useState('');
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [macroError, setMacroError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '', vendor: '', vendor_id: '', description: '', image_url: '',
     price: '', calories: '', protein: '', carbs: '', fats: '',
     ingredients: '', dietary_tags: '', is_meal_of_week: false,
   });
+
+  const estimateMacros = async () => {
+    if (!macroInput.trim()) return;
+    setIsEstimating(true);
+    setMacroError(null);
+    try {
+      const res = await fetch('/api/estimate-macros', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ingredients: macroInput }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFormData(d => ({
+          ...d,
+          calories: String(data.calories ?? ''),
+          protein: String(data.protein ?? ''),
+          carbs: String(data.carbs ?? ''),
+          fats: String(data.fats ?? ''),
+        }));
+        setMacroError(null);
+        setShowMacroModal(false);
+        setMacroInput('');
+      } else if (res.status === 400) {
+        setMacroError(data.error ?? 'Please enter food ingredients only.');
+      } else {
+        setMacroError('Estimation failed — please try again.');
+      }
+    } catch {
+      setMacroError('Estimation failed — please try again.');
+    } finally {
+      setIsEstimating(false);
+    }
+  };
 
   // ── Team ─────────────────────────────────────────────────────────────────
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -446,6 +484,13 @@ export default function AdminPanel() {
                       <div>
                         <label className={LABEL}>Ingredients <span className="normal-case font-normal text-ink-faint">(comma-separated)</span></label>
                         <textarea className={`${INPUT} resize-none`} value={formData.ingredients} onChange={e => setFormData(d => ({ ...d, ingredients: e.target.value }))} required rows={3} placeholder="Salmon, quinoa, avocado, lemon" />
+                        <button
+                          type="button"
+                          onClick={() => setShowMacroModal(true)}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors"
+                        >
+                          ✦ Estimate macros
+                        </button>
                       </div>
                       <div>
                         <label className={LABEL}>Dietary tags <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
@@ -707,6 +752,30 @@ export default function AdminPanel() {
           </div>
         )}
       </main>
+
+      {/* Macro estimation modal */}
+      {showMacroModal && (
+        <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }}>
+          <div onClick={e => e.stopPropagation()} className="bg-card rounded-2xl border border-line p-6 w-full max-w-sm">
+            <h3 className="font-display text-lg font-semibold text-ink mb-4">Estimate macros</h3>
+            <p className="text-sm text-ink-muted mb-4">Describe the meal ingredients and we'll estimate the nutritional values.</p>
+            <textarea
+              value={macroInput}
+              onChange={e => { setMacroInput(e.target.value); setMacroError(null); }}
+              placeholder="e.g., 2 cups chicken breast, 1 cup brown rice, steamed broccoli"
+              rows={4}
+              className={INPUT}
+            />
+            {macroError && <span className="block mt-3 text-xs text-accent">{macroError}</span>}
+            <div className="flex gap-3 mt-5">
+              <Button onClick={estimateMacros} disabled={isEstimating || !macroInput.trim()}>
+                {isEstimating ? 'Estimating…' : 'Estimate'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }} disabled={isEstimating}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

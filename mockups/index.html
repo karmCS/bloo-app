@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bloo — design prototypes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Epilogue:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans:    ['Epilogue', 'system-ui', 'sans-serif'],
+            brand:   ['Fraunces', 'Georgia', 'serif'],
+            display: ['Fraunces', 'Georgia', 'serif'],
+          },
+          colors: {
+            primary:        'var(--c-primary)',
+            'primary-hover':'var(--c-primary-hover)',
+            'primary-active':'var(--c-primary-active)',
+            accent:         'var(--c-accent)',
+            'macro-green':  'var(--c-macro-green)',
+            page:           'var(--c-page)',
+            card:           'var(--c-card)',
+            surface:        'var(--c-surface)',
+            line:           'var(--c-line)',
+            ink:            'var(--c-ink)',
+            'ink-muted':    'var(--c-ink-muted)',
+            'ink-faint':    'var(--c-ink-faint)',
+            // semantic macro tints (light/dark aware)
+            'mp-bg': 'var(--c-mp-bg)', 'mp-fg': 'var(--c-mp-fg)',
+            'mc-bg': 'var(--c-mc-bg)', 'mc-fg': 'var(--c-mc-fg)',
+            'mf-bg': 'var(--c-mf-bg)', 'mf-fg': 'var(--c-mf-fg)',
+          },
+          boxShadow: {
+            soft: '0 1px 2px rgba(26,26,26,.04), 0 4px 16px rgba(26,26,26,.06)',
+            pop:  '0 8px 24px rgba(124,185,232,.35)',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    :root {
+      --c-primary:        #7CB9E8;
+      --c-primary-hover:  #5FA8DF;
+      --c-primary-active: #4A97D0;
+      --c-accent:         #D4522A;
+      --c-macro-green:    #2D6A4F;
+      --c-page:           #F7F5F0;
+      --c-card:           #FFFFFF;
+      --c-surface:        #EFEDE8;
+      --c-line:           #E8E3DA;
+      --c-ink:            #1A1A1A;
+      --c-ink-muted:      #8C8070;
+      --c-ink-faint:      #B5AFA6;
+      --c-mp-bg: #E8F0E8; --c-mp-fg: #2D6A4F; /* protein  */
+      --c-mc-bg: #F4ECDF; --c-mc-fg: #8A5A1F; /* carbs    */
+      --c-mf-bg: #F8E5DC; --c-mf-fg: #B0421F; /* fats     */
+      --shell-bg: #ECE7DA;
+    }
+    .dark {
+      --c-primary:        #7CB9E8;
+      --c-primary-hover:  #95C8EE;
+      --c-primary-active: #B0D4F2;
+      --c-accent:         #E97A52;
+      --c-macro-green:    #6FBF96;
+      --c-page:           #14110D;
+      --c-card:           #1F1B14;
+      --c-surface:        #2A2520;
+      --c-line:           #36302A;
+      --c-ink:            #F4EFE5;
+      --c-ink-muted:      #A89B86;
+      --c-ink-faint:      #6F6557;
+      --c-mp-bg: #1E3A2A; --c-mp-fg: #8FD2A8;
+      --c-mc-bg: #3A2C18; --c-mc-fg: #E0B477;
+      --c-mf-bg: #3A1F18; --c-mf-fg: #ECA386;
+      --shell-bg: #0C0A07;
+    }
+    html, body { background: var(--shell-bg); color: var(--c-ink); }
+    body { font-family: 'Epilogue', system-ui, sans-serif; transition: background-color .25s ease; }
+
+    .frame {
+      width: 1240px; max-width: 100%;
+      margin: 0 auto;
+      border-radius: 24px;
+      overflow: hidden;
+      background: var(--c-page);
+      box-shadow: 0 20px 60px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.06);
+      border: 1px solid var(--c-line);
+    }
+    .browser-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: var(--c-card);
+      border-bottom: 1px solid var(--c-line);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 9999px; }
+    .url-pill {
+      flex: 1; max-width: 520px; margin: 0 auto;
+      font-size: 12px; color: var(--c-ink-muted);
+      background: var(--c-page); border: 1px solid var(--c-line); border-radius: 9999px;
+      padding: 5px 14px; text-align: center;
+    }
+    .screen-label {
+      max-width: 1240px; margin: 0 auto 12px; padding: 0 4px;
+      display: flex; align-items: baseline; justify-content: space-between;
+    }
+    .screen-label h2 { font-family: Fraunces, serif; font-size: 26px; font-weight: 600; color: var(--c-ink); letter-spacing: -.01em; }
+    .screen-label p  { font-size: 13px; color: var(--c-ink-muted); }
+    .section-pad { padding: 56px 24px; }
+
+    /* iPhone-ish device frame */
+    .device {
+      width: 380px;
+      height: 800px;
+      border-radius: 48px;
+      background: #0a0a0a;
+      padding: 12px;
+      box-shadow: 0 30px 60px rgba(0,0,0,.25), 0 4px 12px rgba(0,0,0,.1);
+      flex-shrink: 0;
+    }
+    .device-screen {
+      width: 100%; height: 100%;
+      border-radius: 36px;
+      overflow: hidden;
+      background: var(--c-page);
+      position: relative;
+      display: flex; flex-direction: column;
+    }
+    .notch {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 110px; height: 28px; border-radius: 16px; background: #0a0a0a; z-index: 50;
+    }
+    .status-bar {
+      height: 44px; padding: 16px 28px 0;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px; font-weight: 600; color: var(--c-ink); flex-shrink: 0;
+    }
+    .device-row {
+      max-width: 1240px; margin: 0 auto;
+      display: flex; gap: 32px; justify-content: center; flex-wrap: wrap;
+    }
+    .scroll-area { flex: 1; overflow: hidden; }
+  </style>
+</head>
+<body class="font-sans text-ink">
+
+  <!-- Top bar with dark mode toggle -->
+  <div class="max-w-[1240px] mx-auto px-6 pt-12 pb-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-primary text-white flex items-center justify-center shadow-pop">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      </div>
+      <div>
+        <div class="font-brand text-3xl font-semibold tracking-tight text-ink leading-none">bloo</div>
+        <div class="text-sm text-ink-muted mt-1">Design prototypes — desktop + mobile</div>
+      </div>
+    </div>
+    <button id="themeToggle" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line bg-card text-sm font-semibold text-ink hover:bg-surface transition-colors">
+      <svg id="iconSun"  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <svg id="iconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span id="themeLabel">Dark mode</span>
+    </button>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- DESKTOP                                                                -->
+  <!-- ==================================================================== -->
+  <div class="max-w-[1240px] mx-auto px-6 pt-6 pb-2">
+    <div class="font-brand text-2xl font-semibold text-ink">Desktop</div>
+    <p class="text-sm text-ink-muted mt-1">1240px frames</p>
+  </div>
+
+  <!-- SCREEN 1: CUSTOMER BROWSE (DESKTOP) -->
+  <div class="section-pad">
+    <div class="screen-label">
+      <h2>1 · Customer browse</h2>
+      <p>Discover meals from local vendors with full macro transparency</p>
+    </div>
+
+    <div class="frame">
+      <div class="browser-bar">
+        <span class="dot" style="background:#FF6058"></span><span class="dot" style="background:#FFBD2D"></span><span class="dot" style="background:#28C840"></span>
+        <div class="url-pill">bloo.app</div>
+      </div>
+
+      <div class="flex">
+        <aside class="w-20 bg-card border-r border-line flex flex-col items-center py-5 gap-2">
+          <div class="w-11 h-11 rounded-2xl bg-primary text-white flex items-center justify-center shadow-pop">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+          </div>
+          <button class="w-11 h-11 rounded-2xl text-ink-muted hover:bg-surface flex items-center justify-center transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+          <button class="w-11 h-11 rounded-2xl text-ink-muted hover:bg-surface flex items-center justify-center transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <div class="flex-1"></div>
+          <div class="w-11 h-11 rounded-2xl bg-surface text-ink-muted flex items-center justify-center text-xs font-bold">JM</div>
+        </aside>
+
+        <div class="flex-1">
+          <header class="bg-card border-b border-line px-7 py-4 flex items-center justify-between">
+            <div>
+              <h1 class="font-brand text-2xl font-semibold text-ink leading-none">Sunday, 19 April</h1>
+              <p class="text-ink-muted text-xs mt-1.5 font-medium">12 vendors · 47 meals near you</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" placeholder="Search meals, vendors, ingredients" class="w-80 pl-9 pr-4 py-2.5 rounded-xl bg-surface border border-line text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+              </div>
+              <button class="px-4 py-2.5 rounded-xl border border-line bg-card text-sm font-semibold text-ink-muted hover:text-ink transition-colors flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+                Filters
+              </button>
+            </div>
+          </header>
+
+          <main class="px-7 py-7">
+            <div class="relative rounded-3xl overflow-hidden mb-7 h-[300px] shadow-soft border border-line">
+              <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1400&q=80" alt="" class="w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-gradient-to-r from-black/85 via-black/45 to-transparent"></div>
+              <div class="absolute inset-0 p-8 flex flex-col justify-between">
+                <span class="self-start inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest text-white shadow" style="background: var(--c-accent);">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  Meal of the week
+                </span>
+                <div class="max-w-md">
+                  <div class="flex gap-1.5 mb-3">
+                    <span class="px-2.5 py-0.5 bg-white/15 backdrop-blur text-white text-[10.5px] font-semibold rounded-full border border-white/20">High protein</span>
+                    <span class="px-2.5 py-0.5 bg-white/15 backdrop-blur text-white text-[10.5px] font-semibold rounded-full border border-white/20">Gluten free</span>
+                  </div>
+                  <h2 class="font-brand text-4xl font-semibold text-white mb-1 tracking-tight">Mediterranean bowl</h2>
+                  <p class="text-white/75 text-sm mb-5">by <span class="font-semibold text-white">Olive &amp; Stone</span> · 0.6 mi</p>
+                  <div class="flex items-center gap-3">
+                    <button class="px-5 py-2.5 bg-white text-ink text-sm font-bold rounded-xl hover:bg-white/90 transition shadow">See macros</button>
+                    <div class="flex items-center gap-2 text-white text-xs font-semibold">
+                      <span class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15">540 kcal</span>
+                      <span class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15">38g P</span>
+                      <span class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15">42g C</span>
+                      <span class="px-2.5 py-1 rounded-lg bg-white/10 border border-white/15">22g F</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-brand text-xl font-semibold text-ink">This week's menu</h3>
+              <span class="text-ink-muted text-xs font-medium">8 dishes</span>
+            </div>
+            <div class="flex gap-2 mb-5 overflow-x-auto pb-1">
+              <button class="shrink-0 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold shadow-pop">All</button>
+              <button class="shrink-0 px-4 py-2 rounded-xl bg-card text-ink-muted hover:text-ink text-sm font-semibold border border-line shadow-sm">Olive &amp; Stone</button>
+              <button class="shrink-0 px-4 py-2 rounded-xl bg-card text-ink-muted hover:text-ink text-sm font-semibold border border-line shadow-sm">Earthen Co.</button>
+              <button class="shrink-0 px-4 py-2 rounded-xl bg-card text-ink-muted hover:text-ink text-sm font-semibold border border-line shadow-sm">Sage Kitchen</button>
+              <button class="shrink-0 px-4 py-2 rounded-xl bg-card text-ink-muted hover:text-ink text-sm font-semibold border border-line shadow-sm">Roots Café</button>
+              <button class="shrink-0 px-4 py-2 rounded-xl bg-card text-ink-muted hover:text-ink text-sm font-semibold border border-line shadow-sm">Wild Fern</button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-5">
+              <!-- Card 1 -->
+              <article class="group bg-card rounded-2xl border border-line overflow-hidden shadow-soft hover:shadow-pop transition cursor-pointer">
+                <div class="relative h-44">
+                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=80" alt="" />
+                  <span class="absolute top-3 left-3 px-2 py-0.5 bg-card text-ink text-[10.5px] font-bold rounded-full">Vegan</span>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start justify-between gap-3 mb-1">
+                    <h4 class="font-brand text-lg font-semibold leading-tight text-ink">Quinoa harvest bowl</h4>
+                    <span class="text-sm font-bold text-ink shrink-0">$14</span>
+                  </div>
+                  <p class="text-ink-muted text-xs mb-3">Earthen Co. · 0.4 mi</p>
+                  <div class="grid grid-cols-4 gap-1.5 text-center">
+                    <div class="bg-surface rounded-lg py-1.5"><div class="text-[10px] text-ink-muted font-semibold uppercase">kcal</div><div class="text-sm font-bold text-ink leading-none mt-0.5">480</div></div>
+                    <div class="bg-mp-bg rounded-lg py-1.5"><div class="text-[10px] text-mp-fg font-semibold uppercase">P</div><div class="text-sm font-bold text-mp-fg leading-none mt-0.5">22g</div></div>
+                    <div class="bg-mc-bg rounded-lg py-1.5"><div class="text-[10px] text-mc-fg font-semibold uppercase">C</div><div class="text-sm font-bold text-mc-fg leading-none mt-0.5">62g</div></div>
+                    <div class="bg-mf-bg rounded-lg py-1.5"><div class="text-[10px] text-mf-fg font-semibold uppercase">F</div><div class="text-sm font-bold text-mf-fg leading-none mt-0.5">14g</div></div>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Card 2 -->
+              <article class="group bg-card rounded-2xl border border-line overflow-hidden shadow-soft hover:shadow-pop transition cursor-pointer">
+                <div class="relative h-44">
+                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80" alt="" />
+                  <span class="absolute top-3 left-3 px-2 py-0.5 bg-card text-ink text-[10.5px] font-bold rounded-full">High protein</span>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start justify-between gap-3 mb-1">
+                    <h4 class="font-brand text-lg font-semibold leading-tight text-ink">Grilled salmon plate</h4>
+                    <span class="text-sm font-bold text-ink shrink-0">$18</span>
+                  </div>
+                  <p class="text-ink-muted text-xs mb-3">Sage Kitchen · 0.8 mi</p>
+                  <div class="grid grid-cols-4 gap-1.5 text-center">
+                    <div class="bg-surface rounded-lg py-1.5"><div class="text-[10px] text-ink-muted font-semibold uppercase">kcal</div><div class="text-sm font-bold text-ink leading-none mt-0.5">610</div></div>
+                    <div class="bg-mp-bg rounded-lg py-1.5"><div class="text-[10px] text-mp-fg font-semibold uppercase">P</div><div class="text-sm font-bold text-mp-fg leading-none mt-0.5">44g</div></div>
+                    <div class="bg-mc-bg rounded-lg py-1.5"><div class="text-[10px] text-mc-fg font-semibold uppercase">C</div><div class="text-sm font-bold text-mc-fg leading-none mt-0.5">28g</div></div>
+                    <div class="bg-mf-bg rounded-lg py-1.5"><div class="text-[10px] text-mf-fg font-semibold uppercase">F</div><div class="text-sm font-bold text-mf-fg leading-none mt-0.5">32g</div></div>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Card 3 -->
+              <article class="group bg-card rounded-2xl border border-line overflow-hidden shadow-soft hover:shadow-pop transition cursor-pointer">
+                <div class="relative h-44">
+                  <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&q=80" alt="" />
+                  <span class="absolute top-3 left-3 px-2 py-0.5 bg-card text-ink text-[10.5px] font-bold rounded-full">Keto</span>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start justify-between gap-3 mb-1">
+                    <h4 class="font-brand text-lg font-semibold leading-tight text-ink">Avocado &amp; egg toast</h4>
+                    <span class="text-sm font-bold text-ink shrink-0">$11</span>
+                  </div>
+                  <p class="text-ink-muted text-xs mb-3">Roots Café · 0.3 mi</p>
+                  <div class="grid grid-cols-4 gap-1.5 text-center">
+                    <div class="bg-surface rounded-lg py-1.5"><div class="text-[10px] text-ink-muted font-semibold uppercase">kcal</div><div class="text-sm font-bold text-ink leading-none mt-0.5">390</div></div>
+                    <div class="bg-mp-bg rounded-lg py-1.5"><div class="text-[10px] text-mp-fg font-semibold uppercase">P</div><div class="text-sm font-bold text-mp-fg leading-none mt-0.5">18g</div></div>
+                    <div class="bg-mc-bg rounded-lg py-1.5"><div class="text-[10px] text-mc-fg font-semibold uppercase">C</div><div class="text-sm font-bold text-mc-fg leading-none mt-0.5">24g</div></div>
+                    <div class="bg-mf-bg rounded-lg py-1.5"><div class="text-[10px] text-mf-fg font-semibold uppercase">F</div><div class="text-sm font-bold text-mf-fg leading-none mt-0.5">26g</div></div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: VENDOR PANEL (DESKTOP) -->
+  <div class="section-pad">
+    <div class="screen-label">
+      <h2>2 · Vendor panel — AI macro estimator</h2>
+      <p>Vendors paste ingredients; Claude returns a full macro breakdown</p>
+    </div>
+
+    <div class="frame">
+      <div class="browser-bar">
+        <span class="dot" style="background:#FF6058"></span><span class="dot" style="background:#FFBD2D"></span><span class="dot" style="background:#28C840"></span>
+        <div class="url-pill">bloo.app/v/olive-and-stone</div>
+      </div>
+
+      <div class="flex">
+        <aside class="w-60 bg-card border-r border-line p-5 flex flex-col">
+          <div class="flex items-center gap-2.5 mb-7">
+            <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-pop">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            </div>
+            <span class="font-brand text-xl font-semibold text-ink">bloo</span>
+          </div>
+          <div class="text-[10px] uppercase tracking-widest text-ink-faint font-bold mb-2">Vendor</div>
+          <div class="px-3 py-2.5 rounded-xl bg-surface mb-5">
+            <div class="text-sm font-bold text-ink leading-none">Olive &amp; Stone</div>
+            <div class="text-[11px] text-ink-muted mt-1">olive-and-stone</div>
+          </div>
+          <nav class="space-y-1 text-sm font-semibold">
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/15 text-primary-active">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              Meals
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink-muted hover:bg-surface">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>
+              Insights
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink-muted hover:bg-surface">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a7.97 7.97 0 0 0 0-6l2-1.2-2-3.4-2.3 1A8 8 0 0 0 12 4l-.5-2.5h-3L8 4a8 8 0 0 0-5.1 1.4L0.6 4.4l-2 3.4 2 1.2a7.97 7.97 0 0 0 0 6l-2 1.2 2 3.4 2.3-1A8 8 0 0 0 12 20l.5 2.5h3L16 20a8 8 0 0 0 5.1-1.4l2.3 1 2-3.4z"/></svg>
+              Settings
+            </a>
+          </nav>
+          <div class="mt-auto pt-5 border-t border-line">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-full font-bold text-xs flex items-center justify-center text-white" style="background: var(--c-accent);">MR</div>
+              <div class="min-w-0">
+                <div class="text-xs font-semibold text-ink truncate">Marco R.</div>
+                <div class="text-[10.5px] text-ink-muted truncate">Owner</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="flex-1 relative">
+          <header class="bg-card border-b border-line px-7 py-4 flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-2 text-xs text-ink-muted font-medium">
+                <span>Vendor</span><span>›</span><span>Meals</span><span>›</span><span class="text-ink">New meal</span>
+              </div>
+              <h1 class="font-brand text-2xl font-semibold text-ink mt-0.5">Add a meal</h1>
+            </div>
+            <div class="flex gap-2">
+              <button class="px-4 py-2 rounded-xl border border-line bg-card text-sm font-semibold text-ink-muted hover:text-ink">Cancel</button>
+              <button class="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-pop">Save meal</button>
+            </div>
+          </header>
+
+          <main class="p-7 grid grid-cols-12 gap-6">
+            <section class="col-span-7 bg-card rounded-2xl border border-line p-6 shadow-soft">
+              <div class="grid grid-cols-2 gap-4 mb-5">
+                <div class="col-span-2">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">Name</label>
+                  <input type="text" value="Mediterranean bowl" class="w-full rounded-xl border border-line bg-card text-ink px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">Description</label>
+                  <textarea rows="2" class="w-full rounded-xl border border-line bg-card text-ink px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">Marinated chicken, quinoa, hummus, olives, cucumber, cherry tomatoes, lemon-tahini drizzle.</textarea>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">Price</label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted text-sm">$</span>
+                    <input type="text" value="14.00" class="w-full rounded-xl border border-line bg-card text-ink pl-7 pr-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">Dietary tags</label>
+                  <input type="text" value="High protein, Gluten free" class="w-full rounded-xl border border-line bg-card text-ink px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+              </div>
+
+              <div class="border-t border-line pt-5">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <div class="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Macros</div>
+                    <div class="text-xs text-ink-muted mt-0.5">Estimate with AI or enter manually</div>
+                  </div>
+                  <button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-white text-xs font-bold shadow-pop hover:opacity-95 transition" style="background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    Estimate with AI
+                  </button>
+                </div>
+                <div class="grid grid-cols-4 gap-3">
+                  <div class="bg-surface rounded-xl p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Calories</div>
+                    <div class="mt-1 font-brand text-2xl font-semibold text-ink">540</div>
+                    <div class="text-[10px] text-ink-faint mt-0.5">kcal</div>
+                  </div>
+                  <div class="bg-mp-bg rounded-xl p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-mp-fg">Protein</div>
+                    <div class="mt-1 font-brand text-2xl font-semibold text-mp-fg">38<span class="text-sm">g</span></div>
+                  </div>
+                  <div class="bg-mc-bg rounded-xl p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-mc-fg">Carbs</div>
+                    <div class="mt-1 font-brand text-2xl font-semibold text-mc-fg">42<span class="text-sm">g</span></div>
+                  </div>
+                  <div class="bg-mf-bg rounded-xl p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-mf-fg">Fats</div>
+                    <div class="mt-1 font-brand text-2xl font-semibold text-mf-fg">22<span class="text-sm">g</span></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="col-span-5 space-y-5">
+              <div class="bg-card rounded-2xl border border-line p-5 shadow-soft">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2">Image</div>
+                <div class="rounded-xl border-2 border-dashed border-line bg-surface aspect-[4/3] flex items-center justify-center text-center px-6 cursor-pointer hover:border-primary hover:bg-primary/10 transition">
+                  <div>
+                    <div class="w-10 h-10 mx-auto rounded-xl bg-card border border-line flex items-center justify-center mb-2 shadow-soft">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--c-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                    </div>
+                    <div class="text-sm font-semibold text-ink">Drop image, or click to upload</div>
+                    <div class="text-xs text-ink-muted mt-1">PNG, JPG, WebP up to 4MB</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl p-5 text-white shadow-soft relative overflow-hidden" style="background: linear-gradient(135deg, #1A1A1A 0%, #2D2419 100%);">
+                <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full blur-3xl" style="background: var(--c-primary); opacity: .35;"></div>
+                <div class="relative">
+                  <div class="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-widest text-white/70">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    Powered by Claude
+                  </div>
+                  <h3 class="font-brand text-xl font-semibold mt-1.5">Skip the calorie database.</h3>
+                  <p class="text-white/80 text-xs mt-1 leading-relaxed">Type your ingredients in plain English. We'll estimate calories, protein, carbs, and fats in seconds.</p>
+                  <button class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-white">
+                    Open estimator
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </main>
+
+          <!-- AI estimator modal overlay -->
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center px-6">
+            <div class="w-full max-w-lg bg-card rounded-2xl shadow-pop border border-line overflow-hidden">
+              <div class="px-6 pt-5 pb-3 flex items-start justify-between">
+                <div>
+                  <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/15 text-primary-active text-[10px] font-bold uppercase tracking-wider mb-2">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    AI estimator
+                  </div>
+                  <h3 class="font-brand text-xl font-semibold text-ink">Estimate macros</h3>
+                  <p class="text-xs text-ink-muted mt-0.5">Paste or type ingredients with rough quantities.</p>
+                </div>
+                <button class="w-8 h-8 rounded-lg hover:bg-surface flex items-center justify-center text-ink-muted">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="px-6 pb-5">
+                <textarea rows="5" class="w-full rounded-xl border border-line bg-card text-ink px-3.5 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">6oz grilled chicken thigh
+1/2 cup cooked quinoa
+2 tbsp hummus
+6 kalamata olives
+1/2 cucumber, diced
+1 cup cherry tomatoes
+1 tbsp olive oil + lemon</textarea>
+                <div class="mt-2 flex items-center gap-2 text-[11px] text-ink-muted">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                  Food only — non-food prompts are rejected.
+                </div>
+              </div>
+              <div class="px-6 pb-5 pt-2 border-t border-line bg-page flex items-center justify-between">
+                <span class="text-[11px] text-ink-muted">Typically &lt; 2 seconds</span>
+                <div class="flex gap-2">
+                  <button class="px-4 py-2 rounded-xl text-sm font-semibold text-ink-muted hover:bg-surface">Cancel</button>
+                  <button class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-bold shadow-pop" style="background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                    Estimate
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: MEAL DETAIL (DESKTOP) -->
+  <div class="section-pad">
+    <div class="screen-label">
+      <h2>3 · Meal detail — macro breakdown</h2>
+      <p>Customer view: full nutrition story with vendor context</p>
+    </div>
+
+    <div class="frame">
+      <div class="browser-bar">
+        <span class="dot" style="background:#FF6058"></span><span class="dot" style="background:#FFBD2D"></span><span class="dot" style="background:#28C840"></span>
+        <div class="url-pill">bloo.app/meal/mediterranean-bowl</div>
+      </div>
+
+      <div class="grid grid-cols-2">
+        <div class="relative h-[640px]">
+          <img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1000&q=80" alt="" />
+          <div class="absolute top-5 left-5 flex items-center gap-2">
+            <button class="w-10 h-10 rounded-xl bg-card flex items-center justify-center shadow-soft text-ink">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+          </div>
+          <div class="absolute top-5 right-5 flex items-center gap-2">
+            <button class="w-10 h-10 rounded-xl bg-card flex items-center justify-center shadow-soft text-ink">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </button>
+            <button class="w-10 h-10 rounded-xl bg-card flex items-center justify-center shadow-soft text-ink">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+            </button>
+          </div>
+          <div class="absolute bottom-5 left-5 flex flex-wrap gap-1.5">
+            <span class="px-3 py-1 rounded-full bg-card text-ink text-[11px] font-bold">High protein</span>
+            <span class="px-3 py-1 rounded-full bg-card text-ink text-[11px] font-bold">Gluten free</span>
+            <span class="px-3 py-1 rounded-full bg-card text-ink text-[11px] font-bold">Mediterranean</span>
+          </div>
+        </div>
+
+        <div class="bg-card p-9 overflow-y-auto h-[640px]">
+          <div class="flex items-center gap-2 text-xs font-medium mb-3" style="color: var(--c-accent);">
+            <div class="w-6 h-6 rounded-full flex items-center justify-center text-white" style="background: var(--c-accent);">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </div>
+            <span class="font-semibold">Meal of the week</span>
+          </div>
+          <h1 class="font-brand text-4xl font-semibold tracking-tight text-ink leading-tight">Mediterranean bowl</h1>
+          <div class="mt-2 flex items-center gap-3 text-sm text-ink-muted">
+            <span>by <span class="font-semibold text-ink">Olive &amp; Stone</span></span>
+            <span class="w-1 h-1 rounded-full bg-ink-faint"></span>
+            <span>0.6 mi away</span>
+            <span class="w-1 h-1 rounded-full bg-ink-faint"></span>
+            <div class="flex items-center gap-1" style="color: var(--c-accent);">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              <span class="font-semibold text-ink">4.8</span>
+            </div>
+          </div>
+
+          <p class="mt-4 text-sm leading-relaxed text-ink-muted">
+            Marinated chicken thigh over warm quinoa, hummus, kalamata olives, cucumber, and cherry tomatoes — finished with lemon-tahini drizzle.
+          </p>
+
+          <div class="mt-6 rounded-2xl border border-line bg-page p-5">
+            <div class="flex items-baseline justify-between mb-4">
+              <div>
+                <div class="text-[10.5px] font-bold uppercase tracking-widest text-ink-muted">Per serving</div>
+                <div class="font-brand text-3xl font-semibold text-ink leading-none mt-1">540 <span class="text-sm font-sans font-semibold text-ink-muted">kcal</span></div>
+              </div>
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/15 text-primary-active text-[10.5px] font-bold uppercase tracking-wider">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                AI estimated
+              </div>
+            </div>
+
+            <div class="h-2.5 w-full rounded-full overflow-hidden flex bg-line">
+              <div style="width:28%; background: var(--c-mp-fg);"></div>
+              <div style="width:31%; background: var(--c-mc-fg);"></div>
+              <div style="width:41%; background: var(--c-mf-fg);"></div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-3 gap-3">
+              <div>
+                <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--c-mp-fg);"></span><span class="text-[10.5px] font-bold uppercase tracking-wider text-ink-muted">Protein</span></div>
+                <div class="mt-1 font-brand text-xl font-semibold text-ink">38<span class="text-sm text-ink-muted">g</span></div>
+                <div class="text-[10.5px] text-ink-faint">152 kcal · 28%</div>
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--c-mc-fg);"></span><span class="text-[10.5px] font-bold uppercase tracking-wider text-ink-muted">Carbs</span></div>
+                <div class="mt-1 font-brand text-xl font-semibold text-ink">42<span class="text-sm text-ink-muted">g</span></div>
+                <div class="text-[10.5px] text-ink-faint">168 kcal · 31%</div>
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--c-mf-fg);"></span><span class="text-[10.5px] font-bold uppercase tracking-wider text-ink-muted">Fats</span></div>
+                <div class="mt-1 font-brand text-xl font-semibold text-ink">22<span class="text-sm text-ink-muted">g</span></div>
+                <div class="text-[10.5px] text-ink-faint">198 kcal · 41%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <div class="text-[11px] font-bold uppercase tracking-widest text-ink-muted mb-2">Ingredients</div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Chicken thigh</span>
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Quinoa</span>
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Hummus</span>
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Kalamata olives</span>
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Cucumber</span>
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Cherry tomato</span>
+              <span class="px-2.5 py-1 rounded-lg bg-surface text-ink text-xs font-semibold border border-line">Lemon-tahini</span>
+            </div>
+          </div>
+
+          <div class="mt-7 flex items-center gap-3">
+            <div>
+              <div class="text-[10.5px] font-bold uppercase tracking-widest text-ink-muted">Price</div>
+              <div class="font-brand text-3xl font-semibold text-ink leading-none mt-1">$14</div>
+            </div>
+            <div class="flex-1"></div>
+            <button class="px-4 py-3 rounded-xl border border-line bg-card text-sm font-semibold text-ink-muted hover:text-ink">Save</button>
+            <button class="px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-pop">Order from vendor</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MOBILE                                                                 -->
+  <!-- ==================================================================== -->
+  <div class="max-w-[1240px] mx-auto px-6 pt-12 pb-2 border-t border-line">
+    <div class="font-brand text-2xl font-semibold text-ink">Mobile</div>
+    <p class="text-sm text-ink-muted mt-1">390pt iPhone frames</p>
+  </div>
+
+  <div class="section-pad">
+    <div class="screen-label">
+      <h2>Mobile · all three flows</h2>
+      <p>Browse · Vendor estimator · Meal detail</p>
+    </div>
+
+    <div class="device-row">
+
+      <!-- ============ MOBILE 1: BROWSE ============ -->
+      <div class="device">
+        <div class="device-screen">
+          <div class="notch"></div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx=".5"/><rect x="3.5" y="4" width="2.5" height="6" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg>
+              <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".5" y=".5" width="13" height="10" rx="2.5"/><rect x="2" y="2" width="10" height="7" rx="1" fill="currentColor"/><rect x="14.5" y="3.5" width="1" height="4" rx=".5" fill="currentColor"/></svg>
+            </div>
+          </div>
+
+          <div class="scroll-area">
+            <!-- header -->
+            <div class="px-5 pt-2 pb-4 bg-card border-b border-line">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="font-brand text-2xl font-semibold text-ink leading-none">bloo</div>
+                  <div class="text-[11px] text-ink-muted mt-1.5 font-medium">Sun, 19 Apr · 47 meals nearby</div>
+                </div>
+                <button class="w-10 h-10 rounded-xl bg-surface text-ink-muted flex items-center justify-center text-xs font-bold">JM</button>
+              </div>
+              <div class="relative mt-3">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" placeholder="Search meals or vendors" class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-surface border border-line text-sm text-ink placeholder:text-ink-faint focus:outline-none" />
+              </div>
+            </div>
+
+            <!-- content scroll -->
+            <div class="px-5 py-4 overflow-y-auto" style="height: calc(100% - 96px);">
+              <!-- hero -->
+              <div class="relative rounded-2xl overflow-hidden mb-4 h-44 shadow-soft border border-line">
+                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="" class="w-full h-full object-cover" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+                <div class="absolute top-3 left-3">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[9.5px] font-bold uppercase tracking-wider text-white" style="background: var(--c-accent);">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    Meal of the week
+                  </span>
+                </div>
+                <div class="absolute bottom-3 left-3 right-3">
+                  <h2 class="font-brand text-xl font-semibold text-white tracking-tight leading-tight">Mediterranean bowl</h2>
+                  <p class="text-white/80 text-[11px] mt-0.5">Olive &amp; Stone · 0.6 mi · 540 kcal</p>
+                </div>
+              </div>
+
+              <!-- chips -->
+              <div class="flex gap-1.5 mb-3 overflow-x-auto pb-1" style="scrollbar-width:none;">
+                <button class="shrink-0 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold shadow-pop">All</button>
+                <button class="shrink-0 px-3 py-1.5 rounded-lg bg-card text-ink-muted text-xs font-semibold border border-line">Olive &amp; Stone</button>
+                <button class="shrink-0 px-3 py-1.5 rounded-lg bg-card text-ink-muted text-xs font-semibold border border-line">Earthen Co.</button>
+                <button class="shrink-0 px-3 py-1.5 rounded-lg bg-card text-ink-muted text-xs font-semibold border border-line">Sage</button>
+              </div>
+
+              <!-- meal cards stacked -->
+              <div class="space-y-3">
+                <article class="bg-card rounded-2xl border border-line overflow-hidden shadow-soft">
+                  <div class="flex">
+                    <img class="w-28 h-28 object-cover shrink-0" src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80" alt="" />
+                    <div class="p-3 flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2">
+                        <h4 class="font-brand text-base font-semibold leading-tight text-ink truncate">Quinoa harvest bowl</h4>
+                        <span class="text-sm font-bold text-ink shrink-0">$14</span>
+                      </div>
+                      <p class="text-ink-muted text-[10.5px] mt-0.5">Earthen Co. · 0.4 mi</p>
+                      <div class="grid grid-cols-4 gap-1 text-center mt-2">
+                        <div class="bg-surface rounded-md py-1"><div class="text-[8px] text-ink-muted font-bold uppercase">kcal</div><div class="text-[11px] font-bold text-ink leading-none mt-0.5">480</div></div>
+                        <div class="bg-mp-bg rounded-md py-1"><div class="text-[8px] text-mp-fg font-bold uppercase">P</div><div class="text-[11px] font-bold text-mp-fg leading-none mt-0.5">22g</div></div>
+                        <div class="bg-mc-bg rounded-md py-1"><div class="text-[8px] text-mc-fg font-bold uppercase">C</div><div class="text-[11px] font-bold text-mc-fg leading-none mt-0.5">62g</div></div>
+                        <div class="bg-mf-bg rounded-md py-1"><div class="text-[8px] text-mf-fg font-bold uppercase">F</div><div class="text-[11px] font-bold text-mf-fg leading-none mt-0.5">14g</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="bg-card rounded-2xl border border-line overflow-hidden shadow-soft">
+                  <div class="flex">
+                    <img class="w-28 h-28 object-cover shrink-0" src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80" alt="" />
+                    <div class="p-3 flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2">
+                        <h4 class="font-brand text-base font-semibold leading-tight text-ink truncate">Grilled salmon plate</h4>
+                        <span class="text-sm font-bold text-ink shrink-0">$18</span>
+                      </div>
+                      <p class="text-ink-muted text-[10.5px] mt-0.5">Sage Kitchen · 0.8 mi</p>
+                      <div class="grid grid-cols-4 gap-1 text-center mt-2">
+                        <div class="bg-surface rounded-md py-1"><div class="text-[8px] text-ink-muted font-bold uppercase">kcal</div><div class="text-[11px] font-bold text-ink leading-none mt-0.5">610</div></div>
+                        <div class="bg-mp-bg rounded-md py-1"><div class="text-[8px] text-mp-fg font-bold uppercase">P</div><div class="text-[11px] font-bold text-mp-fg leading-none mt-0.5">44g</div></div>
+                        <div class="bg-mc-bg rounded-md py-1"><div class="text-[8px] text-mc-fg font-bold uppercase">C</div><div class="text-[11px] font-bold text-mc-fg leading-none mt-0.5">28g</div></div>
+                        <div class="bg-mf-bg rounded-md py-1"><div class="text-[8px] text-mf-fg font-bold uppercase">F</div><div class="text-[11px] font-bold text-mf-fg leading-none mt-0.5">32g</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="bg-card rounded-2xl border border-line overflow-hidden shadow-soft">
+                  <div class="flex">
+                    <img class="w-28 h-28 object-cover shrink-0" src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&q=80" alt="" />
+                    <div class="p-3 flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2">
+                        <h4 class="font-brand text-base font-semibold leading-tight text-ink truncate">Avocado &amp; egg toast</h4>
+                        <span class="text-sm font-bold text-ink shrink-0">$11</span>
+                      </div>
+                      <p class="text-ink-muted text-[10.5px] mt-0.5">Roots Café · 0.3 mi</p>
+                      <div class="grid grid-cols-4 gap-1 text-center mt-2">
+                        <div class="bg-surface rounded-md py-1"><div class="text-[8px] text-ink-muted font-bold uppercase">kcal</div><div class="text-[11px] font-bold text-ink leading-none mt-0.5">390</div></div>
+                        <div class="bg-mp-bg rounded-md py-1"><div class="text-[8px] text-mp-fg font-bold uppercase">P</div><div class="text-[11px] font-bold text-mp-fg leading-none mt-0.5">18g</div></div>
+                        <div class="bg-mc-bg rounded-md py-1"><div class="text-[8px] text-mc-fg font-bold uppercase">C</div><div class="text-[11px] font-bold text-mc-fg leading-none mt-0.5">24g</div></div>
+                        <div class="bg-mf-bg rounded-md py-1"><div class="text-[8px] text-mf-fg font-bold uppercase">F</div><div class="text-[11px] font-bold text-mf-fg leading-none mt-0.5">26g</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <!-- bottom tab bar -->
+            <div class="absolute bottom-0 left-0 right-0 bg-card border-t border-line px-6 py-2.5 flex items-center justify-around">
+              <button class="flex flex-col items-center gap-0.5 text-primary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12L12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+                <span class="text-[9.5px] font-bold">Browse</span>
+              </button>
+              <button class="flex flex-col items-center gap-0.5 text-ink-muted">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <span class="text-[9.5px] font-semibold">Search</span>
+              </button>
+              <button class="flex flex-col items-center gap-0.5 text-ink-muted">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span class="text-[9.5px] font-semibold">Saved</span>
+              </button>
+              <button class="flex flex-col items-center gap-0.5 text-ink-muted">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                <span class="text-[9.5px] font-semibold">Profile</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ MOBILE 2: VENDOR ESTIMATOR ============ -->
+      <div class="device">
+        <div class="device-screen">
+          <div class="notch"></div>
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx=".5"/><rect x="3.5" y="4" width="2.5" height="6" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg>
+              <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".5" y=".5" width="13" height="10" rx="2.5"/><rect x="2" y="2" width="10" height="7" rx="1" fill="currentColor"/><rect x="14.5" y="3.5" width="1" height="4" rx=".5" fill="currentColor"/></svg>
+            </div>
+          </div>
+
+          <div class="scroll-area relative">
+            <!-- header -->
+            <div class="px-5 pt-2 pb-3 bg-card border-b border-line flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <button class="w-9 h-9 rounded-xl border border-line bg-card flex items-center justify-center text-ink">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div>
+                  <div class="text-[10px] text-ink-muted font-medium uppercase tracking-wider">Olive &amp; Stone</div>
+                  <div class="font-brand text-lg font-semibold text-ink leading-none mt-0.5">Add a meal</div>
+                </div>
+              </div>
+              <button class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-bold shadow-pop">Save</button>
+            </div>
+
+            <!-- form -->
+            <div class="px-5 py-4 overflow-y-auto pb-32" style="height: calc(100% - 60px);">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Name</label>
+                  <input type="text" value="Mediterranean bowl" class="w-full rounded-xl border border-line bg-card text-ink px-3 py-2.5 text-sm" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1">Image</label>
+                  <div class="rounded-xl border-2 border-dashed border-line bg-surface aspect-[4/3] flex items-center justify-center cursor-pointer">
+                    <div class="text-center">
+                      <div class="w-9 h-9 mx-auto rounded-xl bg-card border border-line flex items-center justify-center mb-1 shadow-soft">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--c-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                      </div>
+                      <div class="text-xs font-semibold text-ink">Upload photo</div>
+                      <div class="text-[10px] text-ink-muted mt-0.5">PNG · JPG · WebP</div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between mb-1.5">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-ink-muted">Macros</label>
+                    <button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-white text-[10px] font-bold shadow-pop" style="background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                      Estimate with AI
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-surface rounded-xl p-3"><div class="text-[9px] font-bold uppercase text-ink-muted">Calories</div><div class="font-brand text-xl font-semibold text-ink">540</div></div>
+                    <div class="bg-mp-bg rounded-xl p-3"><div class="text-[9px] font-bold uppercase text-mp-fg">Protein</div><div class="font-brand text-xl font-semibold text-mp-fg">38g</div></div>
+                    <div class="bg-mc-bg rounded-xl p-3"><div class="text-[9px] font-bold uppercase text-mc-fg">Carbs</div><div class="font-brand text-xl font-semibold text-mc-fg">42g</div></div>
+                    <div class="bg-mf-bg rounded-xl p-3"><div class="text-[9px] font-bold uppercase text-mf-fg">Fats</div><div class="font-brand text-xl font-semibold text-mf-fg">22g</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- bottom-sheet AI estimator -->
+            <div class="absolute inset-0 pointer-events-none">
+              <div class="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
+              <div class="absolute bottom-0 left-0 right-0 bg-card border-t border-line rounded-t-3xl p-5 shadow-pop pointer-events-auto">
+                <div class="w-10 h-1 rounded-full bg-line mx-auto mb-4"></div>
+                <div class="flex items-center gap-2 mb-1">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/15 text-primary-active text-[9.5px] font-bold uppercase tracking-wider">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                    AI estimator
+                  </div>
+                </div>
+                <h3 class="font-brand text-lg font-semibold text-ink">Estimate macros</h3>
+                <p class="text-[11px] text-ink-muted mt-0.5">Type your ingredients with rough quantities.</p>
+                <textarea rows="5" class="mt-3 w-full rounded-xl border border-line bg-card text-ink px-3 py-2.5 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">6oz grilled chicken thigh
+1/2 cup cooked quinoa
+2 tbsp hummus
+6 kalamata olives
+1/2 cucumber, diced
+1 cup cherry tomatoes</textarea>
+                <button class="mt-3 w-full py-3 rounded-xl text-white text-sm font-bold shadow-pop inline-flex items-center justify-center gap-2" style="background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                  Estimate
+                </button>
+                <p class="text-center text-[10px] text-ink-muted mt-2">Typically &lt; 2 seconds · food only</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ MOBILE 3: MEAL DETAIL ============ -->
+      <div class="device">
+        <div class="device-screen">
+          <div class="notch"></div>
+          <div class="status-bar text-white" style="color: white;">
+            <span>9:41</span>
+            <div class="flex items-center gap-1.5">
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="6" width="2.5" height="4" rx=".5"/><rect x="3.5" y="4" width="2.5" height="6" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg>
+              <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x=".5" y=".5" width="13" height="10" rx="2.5"/><rect x="2" y="2" width="10" height="7" rx="1" fill="currentColor"/><rect x="14.5" y="3.5" width="1" height="4" rx=".5" fill="currentColor"/></svg>
+            </div>
+          </div>
+
+          <div class="scroll-area relative" style="margin-top: -44px;">
+            <!-- hero image -->
+            <div class="relative h-72">
+              <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" class="w-full h-full object-cover" alt="" />
+              <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent"></div>
+              <div class="absolute top-12 left-4 right-4 flex items-center justify-between">
+                <button class="w-10 h-10 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-soft text-ink">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div class="flex gap-2">
+                  <button class="w-10 h-10 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-soft text-ink">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                  </button>
+                  <button class="w-10 h-10 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-soft text-ink">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- content card overlapping image -->
+            <div class="relative bg-card rounded-t-3xl -mt-6 p-5 pb-28 overflow-y-auto" style="height: calc(100% - 16rem);">
+              <div class="flex items-center gap-1.5 text-[10.5px] font-semibold mb-2" style="color: var(--c-accent);">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                Meal of the week
+              </div>
+              <h1 class="font-brand text-2xl font-semibold text-ink leading-tight tracking-tight">Mediterranean bowl</h1>
+              <div class="mt-1.5 flex items-center gap-2 text-[11px] text-ink-muted">
+                <span>Olive &amp; Stone</span>
+                <span class="w-1 h-1 rounded-full bg-ink-faint"></span>
+                <span>0.6 mi</span>
+                <span class="w-1 h-1 rounded-full bg-ink-faint"></span>
+                <span style="color: var(--c-accent);">★ 4.8</span>
+              </div>
+
+              <div class="flex flex-wrap gap-1 mt-2">
+                <span class="px-2 py-0.5 rounded-full bg-surface text-ink text-[9.5px] font-bold border border-line">High protein</span>
+                <span class="px-2 py-0.5 rounded-full bg-surface text-ink text-[9.5px] font-bold border border-line">Gluten free</span>
+              </div>
+
+              <p class="mt-3 text-[12.5px] leading-relaxed text-ink-muted">
+                Marinated chicken thigh over warm quinoa, hummus, kalamata olives, cucumber, and cherry tomatoes — finished with lemon-tahini.
+              </p>
+
+              <!-- macro card -->
+              <div class="mt-4 rounded-2xl border border-line bg-page p-4">
+                <div class="flex items-baseline justify-between mb-3">
+                  <div>
+                    <div class="text-[9.5px] font-bold uppercase tracking-widest text-ink-muted">Per serving</div>
+                    <div class="font-brand text-2xl font-semibold text-ink leading-none mt-0.5">540 <span class="text-xs font-sans font-semibold text-ink-muted">kcal</span></div>
+                  </div>
+                  <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/15 text-primary-active text-[9px] font-bold uppercase tracking-wider">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                    AI est.
+                  </div>
+                </div>
+                <div class="h-2 w-full rounded-full overflow-hidden flex bg-line">
+                  <div style="width:28%; background: var(--c-mp-fg);"></div>
+                  <div style="width:31%; background: var(--c-mc-fg);"></div>
+                  <div style="width:41%; background: var(--c-mf-fg);"></div>
+                </div>
+                <div class="mt-3 grid grid-cols-3 gap-2">
+                  <div>
+                    <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--c-mp-fg);"></span><span class="text-[9px] font-bold uppercase text-ink-muted">Protein</span></div>
+                    <div class="font-brand text-base font-semibold text-ink mt-0.5">38g</div>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--c-mc-fg);"></span><span class="text-[9px] font-bold uppercase text-ink-muted">Carbs</span></div>
+                    <div class="font-brand text-base font-semibold text-ink mt-0.5">42g</div>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--c-mf-fg);"></span><span class="text-[9px] font-bold uppercase text-ink-muted">Fats</span></div>
+                    <div class="font-brand text-base font-semibold text-ink mt-0.5">22g</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Ingredients</div>
+                <div class="flex flex-wrap gap-1">
+                  <span class="px-2 py-0.5 rounded-md bg-surface text-ink text-[10.5px] font-semibold border border-line">Chicken thigh</span>
+                  <span class="px-2 py-0.5 rounded-md bg-surface text-ink text-[10.5px] font-semibold border border-line">Quinoa</span>
+                  <span class="px-2 py-0.5 rounded-md bg-surface text-ink text-[10.5px] font-semibold border border-line">Hummus</span>
+                  <span class="px-2 py-0.5 rounded-md bg-surface text-ink text-[10.5px] font-semibold border border-line">Olives</span>
+                  <span class="px-2 py-0.5 rounded-md bg-surface text-ink text-[10.5px] font-semibold border border-line">Cucumber</span>
+                  <span class="px-2 py-0.5 rounded-md bg-surface text-ink text-[10.5px] font-semibold border border-line">Cherry tomato</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- sticky CTA -->
+            <div class="absolute bottom-0 left-0 right-0 bg-card border-t border-line p-4 flex items-center gap-3">
+              <div>
+                <div class="text-[9.5px] font-bold uppercase tracking-widest text-ink-muted">Price</div>
+                <div class="font-brand text-2xl font-semibold text-ink leading-none mt-0.5">$14</div>
+              </div>
+              <button class="flex-1 ml-auto py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-sm font-bold shadow-pop">Order from vendor</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="text-center text-xs text-ink-muted py-10">
+    bloo · prototypes · Fraunces + Epilogue · primary <code>#7CB9E8</code> · accent <code>#D4522A</code>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const btn  = document.getElementById('themeToggle');
+    const lbl  = document.getElementById('themeLabel');
+    const sun  = document.getElementById('iconSun');
+    const moon = document.getElementById('iconMoon');
+
+    function apply(mode) {
+      if (mode === 'dark') {
+        root.classList.add('dark');
+        lbl.textContent = 'Light mode';
+        sun.classList.remove('hidden');
+        moon.classList.add('hidden');
+      } else {
+        root.classList.remove('dark');
+        lbl.textContent = 'Dark mode';
+        sun.classList.add('hidden');
+        moon.classList.remove('hidden');
+      }
+    }
+
+    const stored = localStorage.getItem('bloo-theme');
+    apply(stored || 'light');
+
+    btn.addEventListener('click', () => {
+      const next = root.classList.contains('dark') ? 'light' : 'dark';
+      localStorage.setItem('bloo-theme', next);
+      apply(next);
+    });
+  </script>
+</body>
+</html>

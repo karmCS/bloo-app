@@ -1,290 +1,298 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Meal } from '../lib/supabase';
 import { useMeals } from '../hooks/useMeals';
 import { useActiveVendors } from '../hooks/useActiveVendors';
+import { useReveal } from '../hooks/useReveal';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
-import { UtensilsCrossed, Home, Menu, X } from 'lucide-react';
 
 export default function Homepage() {
   const { meals, loading } = useMeals();
-  const { vendors: activeVendors, loading: vendorsLoading } = useActiveVendors();
+  const { vendors, loading: vendorsLoading } = useActiveVendors();
+
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activePill, setActivePill] = useState<string>('all');
 
-  const mealOfTheWeek = useMemo(() => meals.find((m) => m.is_meal_of_week) ?? null, [meals]);
+  const motw = useMemo(() => meals.find((m) => m.is_meal_of_week) ?? meals[0] ?? null, [meals]);
 
   const filteredMeals = useMemo(() => {
-    if (!selectedVendorId) return meals;
-    return meals.filter((m) => m.vendor_id === selectedVendorId);
-  }, [meals, selectedVendorId]);
+    if (activePill === 'all') return meals;
+    if (activePill === 'high-protein') return meals.filter((m) => m.protein >= 30);
+    if (activePill === 'under-600') return meals.filter((m) => m.calories < 600);
+    return meals.filter((m) => m.vendor_id === activePill);
+  }, [meals, activePill]);
 
   const handleMealClick = (meal: Meal) => {
     setSelectedMeal(meal);
     setIsModalOpen(true);
   };
-
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setTimeout(() => setSelectedMeal(null), 300);
   };
 
-  return (
-    <div className="flex min-h-screen bg-page font-sans">
-      {/* Desktop sidebar */}
-      <aside className="hidden sm:flex fixed top-0 left-0 h-full w-16 bg-card flex-col items-center py-4 z-30 border-r border-line shadow-sm">
-        <nav className="flex flex-col items-center gap-1 flex-1">
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer transition-all duration-200 group bg-primary shadow-[0px_4px_12px_rgba(37,99,235,0.35)]">
-            <Home size={18} className="text-white" />
-            <div className="absolute left-14 bg-ink text-white text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-line shadow-lg z-50">
-              Home
-            </div>
-          </div>
-        </nav>
-      </aside>
+  // Pill sliding indicator
+  const pillRowRef = useRef<HTMLDivElement | null>(null);
+  const pillRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [pillIndicator, setPillIndicator] = useState({ left: 0, width: 0 });
 
-      {/* Mobile sidebar overlay */}
-      {mobileNavOpen && (
-        <div className="sm:hidden fixed inset-0 z-40">
-          <button
-            type="button"
-            aria-label="Close menu"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setMobileNavOpen(false)}
-          />
-          <div className="absolute top-0 left-0 h-full w-72 bg-card border-r border-line shadow-xl p-4 flex flex-col">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <UtensilsCrossed className="text-primary" size={20} />
+  useEffect(() => {
+    const row = pillRowRef.current;
+    const el = pillRefs.current[activePill];
+    if (!row || !el) return;
+    const rowRect = row.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    setPillIndicator({ left: elRect.left - rowRect.left + row.scrollLeft, width: elRect.width });
+  }, [activePill, vendors.length]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const row = pillRowRef.current;
+      const el = pillRefs.current[activePill];
+      if (!row || !el) return;
+      const rowRect = row.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      setPillIndicator({ left: elRect.left - rowRect.left + row.scrollLeft, width: elRect.width });
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [activePill]);
+
+  const heroReveal = useReveal<HTMLDivElement>();
+  const heroFloatReveal = useReveal<HTMLDivElement>();
+  const gridReveal = useReveal<HTMLDivElement>(0.05);
+
+  const scrollToMenu = () => {
+    document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  return (
+    <div className="min-h-screen bg-page font-sans text-ink">
+      {/* Top nav */}
+      <header className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4 flex items-center justify-between gap-4 animate-fadeIn">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white flex items-center justify-center shadow-[0_4px_16px_rgba(124,185,232,.25)] anim-float shrink-0">
+            <img src="/favicon-minimal.svg" alt="" className="w-6 h-6" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-display text-2xl sm:text-3xl font-semibold tracking-tight leading-none">
+              <span className="italic text-primary">bloo</span>
+            </div>
+            <div className="text-xs text-ink-muted mt-1 truncate">A community driven wellness project</div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={scrollToMenu}
+          className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line bg-card text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface transition-colors"
+        >
+          See this week's menu
+        </button>
+      </header>
+
+      {/* ===== 1 · Editorial hero ===== */}
+      <section className="px-4 sm:px-6">
+        <div className="max-w-[1240px] mx-auto relative overflow-hidden rounded-[28px] border border-line bg-card">
+          <div className="oval" style={{ width: 360, height: 360, background: '#7CB9E8', top: -80, left: -60, animationDelay: '-2s' }} />
+          <div className="oval" style={{ width: 260, height: 260, background: '#D4522A', top: 180, right: -60, animationDelay: '-5s' }} />
+          <div className="oval" style={{ width: 200, height: 200, background: '#2D6A4F', bottom: -40, left: '40%', opacity: 0.32, animationDelay: '-3s' }} />
+
+          <div className="relative px-6 sm:px-10 lg:px-12 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+            <div ref={heroReveal} className="lg:col-span-7 reveal stagger">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur border border-line text-[11px] font-bold uppercase tracking-widest text-ink">
+                <span className="live-dot" />
+                Loma Linda 
+              </span>
+              <h1 className="font-display font-semibold tracking-tight text-ink mt-5 sm:mt-6" style={{ fontSize: 'clamp(36px, 6vw, 60px)', lineHeight: 1.02 }}>
+                Rooted in one of the world's <span className="italic text-primary">Blue Zones</span>.
+              </h1>
+              <p className="text-ink-muted text-base sm:text-[17px] mt-5 sm:mt-6 max-w-xl leading-relaxed">
+                Loma Linda is one of five globally recognized Blue Zones, regions where people consistently live longer, healthier lives. Its local food culture reflects that legacy.
+              </p>
+              <p className="text-ink-muted text-base sm:text-[17px] mt-4 max-w-xl leading-relaxed">
+                <span className="italic text-primary font-medium">bloo</span> seeks to guide those in the Loma Linda area to discover the many different delicacies hidden within the community, offering a modern window into these traditions. We aim to display nutritional transparency paired with Blue Zone driven dining as a digital extension of the Loma Linda's lifestyle: intentional, informed, and rooted in community. 
+              </p>
+              <div className="mt-7 sm:mt-8 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={scrollToMenu}
+                  className="glow-cta px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-primary text-white text-sm font-bold sheen"
+                >
+                  See this week's menu →
+                </button>
+              </div>
+              <div className="mt-7 sm:mt-8 flex items-center gap-4 sm:gap-5">
+                <div className="flex -space-x-2">
+                  {(vendorsLoading ? [] : vendors.slice(0, 3)).map((v, i) => (
+                    <div
+                      key={v.id}
+                      className={`w-8 h-8 rounded-full border-2 border-card flex items-center justify-center text-[10px] font-bold ${
+                        i === 0 ? 'bg-macro-green/15 text-macro-green' : i === 1 ? 'bg-primary/15 text-primary-active' : 'bg-accent/15 text-accent'
+                      }`}
+                    >
+                      {v.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  ))}
+                  {!vendorsLoading && vendors.length > 3 && (
+                    <div className="w-8 h-8 rounded-full bg-surface border-2 border-card flex items-center justify-center text-[10px] font-bold text-ink-muted">
+                      +{vendors.length - 3}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-lg font-bold text-ink font-brand leading-none">bloo</div>
-                  <div className="text-[11px] text-ink-muted font-medium mt-0.5">Menu</div>
+                <div className="text-xs text-ink-muted font-medium">
+                  {vendorsLoading ? '…' : `${vendors.length} neighborhood ${vendors.length === 1 ? 'kitchen' : 'kitchens'} this week`}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen(false)}
-                className="p-2 rounded-xl border border-line bg-card hover:bg-surface transition-colors"
-                aria-label="Close"
-              >
-                <X size={18} className="text-ink" />
-              </button>
             </div>
 
-            <div className="mt-6 space-y-2">
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen(false)}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-primary text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]"
-              >
-                <Home size={18} />
-                <span className="text-sm font-semibold">Home</span>
-              </button>
-            </div>
+            {/* Floating right column */}
+            <div ref={heroFloatReveal} className="lg:col-span-5 relative h-[380px] sm:h-[440px] reveal">
+              <svg className="absolute -top-4 right-2 sm:right-6 anim-spin-slow" width="220" height="220" viewBox="0 0 120 120" aria-hidden>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#E8E3DA" strokeWidth="2" strokeDasharray="4 6" />
+              </svg>
 
-            <div className="mt-auto pt-4 border-t border-line">
-              <p className="text-xs text-ink-muted font-medium">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-              </p>
+              {motw && (
+                <div
+                  className="absolute right-0 top-0 w-[260px] sm:w-[300px] rounded-3xl overflow-hidden border border-line anim-float cursor-pointer"
+                  style={{ animationDelay: '-1s', boxShadow: '0 18px 40px -16px rgba(26,26,26,.25)' }}
+                  onClick={() => handleMealClick(motw)}
+                >
+                  <div className="h-40 sm:h-48 relative overflow-hidden">
+                    <img className="w-full h-full object-cover" src={motw.image_url} alt={motw.name} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-accent text-white text-[10px] font-bold uppercase tracking-widest">featured meal the week</span>
+                  </div>
+                  <div className="p-4 bg-card">
+                    <div className="font-display text-lg font-semibold leading-tight">{motw.name}</div>
+                    <div className="text-xs text-ink-muted mt-0.5">{motw.vendor}</div>
+                    <div className="flex gap-1.5 mt-3 flex-wrap">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">{motw.protein}g P</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">{motw.carbs}g C</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">{motw.fats}g F</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      <div className="flex-1 ml-0 sm:ml-16 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b border-line px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="sm:hidden w-10 h-10 shrink-0 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center"
-              aria-label="Open menu"
-              onClick={() => setMobileNavOpen(true)}
-            >
-              <Menu size={18} className="text-ink" />
-            </button>
-            <div className="flex min-w-0 items-center gap-3">
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-card"
-                aria-hidden
-              >
-                <UtensilsCrossed className="text-primary" size={20} />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold text-ink font-brand tracking-wide leading-none">bloo</h1>
-                <p className="text-ink-muted text-xs mt-0.5 font-medium">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
-              </div>
+      {/* ===== 2 · Meal grid with pill filter ===== */}
+      <section id="menu" className="px-4 sm:px-6 mt-12 sm:mt-16">
+        <div className="max-w-[1240px] mx-auto">
+          <div className="mb-6 flex items-end justify-between gap-3 flex-wrap">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-accent mb-1">This week</div>
+              <h2 className="font-display text-2xl sm:text-3xl font-semibold">Every meal, every macro</h2>
+            </div>
+            <div className="text-xs font-semibold text-ink-muted whitespace-nowrap">
+              {loading ? '…' : `${filteredMeals.length} dish${filteredMeals.length === 1 ? '' : 'es'}`}
             </div>
           </div>
-        </header>
 
-        <main className="flex-1 p-6">
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-2 border-line border-t-primary" />
+          <div className="mb-6 flex items-center gap-3 overflow-x-auto pill-row" ref={pillRowRef}>
+            <div className="inline-flex items-center gap-1 p-1 rounded-2xl bg-surface border border-line relative">
+              <div
+                className="pill-indicator"
+                style={{ transform: `translateX(${pillIndicator.left}px)`, width: pillIndicator.width }}
+              />
+              <button
+                type="button"
+                ref={(el) => (pillRefs.current['all'] = el)}
+                onClick={() => setActivePill('all')}
+                className={`pill ${activePill === 'all' ? 'active' : ''}`}
+              >
+                All
+              </button>
+              {vendorsLoading ? (
+                <>
+                  <div className="h-9 w-24 rounded-xl skel" />
+                  <div className="h-9 w-24 rounded-xl skel" />
+                </>
+              ) : (
+                vendors.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    ref={(el) => (pillRefs.current[v.id] = el)}
+                    onClick={() => setActivePill(v.id)}
+                    className={`pill ${activePill === v.id ? 'active' : ''}`}
+                  >
+                    {v.name}
+                  </button>
+                ))
+              )}
+              <button
+                type="button"
+                ref={(el) => (pillRefs.current['high-protein'] = el)}
+                onClick={() => setActivePill('high-protein')}
+                className={`pill ${activePill === 'high-protein' ? 'active' : ''}`}
+              >
+                High protein
+              </button>
+              <button
+                type="button"
+                ref={(el) => (pillRefs.current['under-600'] = el)}
+                onClick={() => setActivePill('under-600')}
+                className={`pill ${activePill === 'under-600' ? 'active' : ''}`}
+              >
+                Under 600 cal
+              </button>
             </div>
-          ) : meals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-96 px-4">
-              <div className="w-20 h-20 rounded-full bg-surface flex items-center justify-center mb-6 border border-line">
-                <UtensilsCrossed className="text-ink-faint" size={36} />
-              </div>
-              <h2 className="text-2xl font-bold text-ink mb-2 font-sans font-semibold">No meals available yet</h2>
-              <p className="text-ink-muted text-center max-w-sm font-normal">Check back soon for this week&apos;s curated meals</p>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-2xl overflow-hidden border border-line bg-card">
+                  <div className="skel" style={{ aspectRatio: '4/3' }} />
+                  <div className="p-4 space-y-2">
+                    <div className="skel h-4 w-3/4" />
+                    <div className="skel h-3 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredMeals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 rounded-2xl border border-dashed border-line bg-card/50">
+              <p className="font-display text-xl font-semibold text-ink">No meals match this filter</p>
+              <button
+                type="button"
+                onClick={() => setActivePill('all')}
+                className="mt-3 text-sm text-primary-active font-semibold hover:underline"
+              >
+                Show all meals
+              </button>
             </div>
           ) : (
-            <>
-              {/* Meal of the week hero */}
-              {mealOfTheWeek && (
-                <div
-                  className="relative rounded-2xl overflow-hidden mb-8 cursor-pointer group shadow-lg border border-line/60"
-                  style={{ height: '320px' }}
-                  onClick={() => handleMealClick(mealOfTheWeek)}
-                >
-                  <img
-                    src={mealOfTheWeek.image_url}
-                    alt={mealOfTheWeek.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/10" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-
-                  <div className="absolute inset-0 flex flex-col justify-between p-7 sm:p-9">
-                    <div className="flex items-center gap-2 w-fit">
-                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest bg-amber-400/90 text-amber-950 backdrop-blur-sm shadow-md">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                        Meal of the week
-                      </span>
-                    </div>
-
-                    <div className="max-w-lg">
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {mealOfTheWeek.dietary_tags.slice(0, 3).map((tag, i) => (
-                          <span key={i} className="px-2.5 py-0.5 bg-white/10 backdrop-blur-sm text-white/90 text-[10.5px] font-semibold rounded-full border border-white/20 tracking-wide">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <h2 className="text-3xl sm:text-4xl font-bold text-white mb-1.5 font-brand leading-tight drop-shadow-md tracking-tight">
-                        {mealOfTheWeek.name}
-                      </h2>
-                      <p className="text-white/70 text-sm mb-5 font-medium">by {mealOfTheWeek.vendor}</p>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleMealClick(mealOfTheWeek); }}
-                        className="px-5 py-2.5 bg-white text-ink text-sm font-bold rounded-xl hover:bg-white/90 transition-all duration-200 shadow-lg"
-                      >
-                        See macros
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Fallback hero when no meal of the week is set */}
-              {!mealOfTheWeek && filteredMeals.length > 0 && (
-                <div
-                  className="relative rounded-2xl overflow-hidden mb-8 cursor-pointer group shadow-md border border-line/80"
-                  style={{ height: '280px' }}
-                  onClick={() => handleMealClick(filteredMeals[0])}
-                >
-                  <img
-                    src={filteredMeals[0].image_url}
-                    alt={filteredMeals[0].name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
-                  <div className="absolute inset-0 flex flex-col justify-end p-8">
-                    <div className="max-w-xl">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {filteredMeals[0].dietary_tags.slice(0, 3).map((tag, i) => (
-                          <span key={i} className="px-3 py-1 bg-primary/20 backdrop-blur-sm text-white text-xs font-semibold rounded-full border border-primary/30">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <h2 className="text-3xl font-bold text-white mb-1 font-brand leading-tight drop-shadow-md">
-                        {filteredMeals[0].name}
-                      </h2>
-                      <p className="text-white/90 text-sm mb-4 font-medium">by {filteredMeals[0].vendor}</p>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleMealClick(filteredMeals[0]); }}
-                        className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-[0px_4px_12px_rgba(37,99,235,0.35)]"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-ink font-sans font-semibold">This Week&apos;s Menu</h3>
-                  <span className="text-ink-muted text-sm font-medium">{filteredMeals.length} dishes</span>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedVendorId(null)}
-                    className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                      selectedVendorId === null
-                        ? 'bg-primary text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]'
-                        : 'bg-card text-ink-muted hover:text-ink border border-line shadow-sm'
-                    }`}
-                  >
-                    All
-                  </button>
-                  {vendorsLoading ? (
-                    <>
-                      <div className="shrink-0 h-9 w-20 animate-pulse rounded-xl bg-surface border border-line/60" />
-                      <div className="shrink-0 h-9 w-24 animate-pulse rounded-xl bg-surface border border-line/60" />
-                      <div className="shrink-0 h-9 w-28 animate-pulse rounded-xl bg-surface border border-line/60" />
-                    </>
-                  ) : (
-                    activeVendors.map((v) => {
-                      const active = selectedVendorId === v.id;
-                      return (
-                        <button
-                          type="button"
-                          key={v.id}
-                          onClick={() => setSelectedVendorId(v.id)}
-                          className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
-                            active
-                              ? 'bg-primary text-white shadow-[0px_4px_12px_rgba(37,99,235,0.3)]'
-                              : 'bg-card text-ink-muted hover:text-ink border border-line shadow-sm'
-                          }`}
-                        >
-                          {v.name}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-
-              {filteredMeals.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24">
-                  <p className="text-ink-muted text-center font-sans font-medium">No meals for this vendor. Try another filter.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredMeals.map((meal) => (
-                    <MealCard key={meal.id} meal={meal} onClick={() => handleMealClick(meal)} />
-                  ))}
-                </div>
-              )}
-            </>
+            <div ref={gridReveal} className="reveal stagger grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredMeals.map((meal, i) => (
+                <MealCard key={meal.id} meal={meal} index={i} onClick={() => handleMealClick(meal)} />
+              ))}
+            </div>
           )}
-        </main>
+        </div>
+      </section>
 
-        <Footer />
-      </div>
+      {/* ===== 5 · Vendor marquee ===== */}
+      {!vendorsLoading && vendors.length > 0 && (
+        <section className="mt-16 sm:mt-20 py-6 border-y border-line bg-surface/40 overflow-hidden">
+          <div className="marquee whitespace-nowrap">
+            {[...vendors, ...vendors, ...vendors].map((v, i) => (
+              <span key={`${v.id}-${i}`} className="inline-flex items-center gap-3 text-ink-muted font-display text-lg sm:text-xl">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent/60" />
+                <span>{v.name}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <Footer />
 
       <MealDetailModal meal={selectedMeal} isOpen={isModalOpen} onClose={handleCloseModal} />
     </div>

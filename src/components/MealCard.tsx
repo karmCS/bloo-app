@@ -10,16 +10,29 @@ export default function MealCard({ meal, onClick, index = 0 }: MealCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group cursor-pointer bg-card rounded-2xl overflow-hidden border border-line hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 animate-staggerIn"
+      className="meal-card group cursor-pointer bg-card rounded-2xl overflow-hidden border border-line animate-staggerIn"
       style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="relative overflow-hidden" style={{ aspectRatio: '4/3' }}>
         <img
           src={meal.image_url}
           alt={meal.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+          className="meal-img w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+        {/* Slide-up macro strip on hover */}
+        <div className="macro-strip">
+          <div className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-0 group-hover:opacity-80 transition-opacity duration-300">Macros</div>
+          <div className="flex flex-wrap gap-x-2 text-xs font-bold">
+            <span>{meal.calories} kcal</span>
+            <span className="opacity-60">·</span>
+            <span>{meal.protein}g P</span>
+            <span className="opacity-60">·</span>
+            <span>{meal.carbs}g C</span>
+            <span className="opacity-60">·</span>
+            <span>{meal.fats}g F</span>
+          </div>
+        </div>
       </div>
 
       <div className="p-4">
@@ -27,15 +40,17 @@ export default function MealCard({ meal, onClick, index = 0 }: MealCardProps) {
           {meal.name}
         </h3>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent/10 text-accent text-xs font-semibold rounded-full border border-accent/20">
-            🔥 {meal.calories} cal
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">
+            {meal.protein}g P
           </span>
-          <span className="text-ink-muted text-xs font-medium">P {meal.protein}g</span>
-          <span className="text-ink-faint text-xs">·</span>
-          <span className="text-ink-muted text-xs font-medium">C {meal.carbs}g</span>
-          <span className="text-ink-faint text-xs">·</span>
-          <span className="text-ink-muted text-xs font-medium">F {meal.fats}g</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">
+            {meal.carbs}g C
+          </span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">
+            {meal.fats}g F
+          </span>
+          <span className="ml-auto text-[10px] font-semibold text-ink-muted">{meal.calories} cal</span>
         </div>
       </div>
     </div>

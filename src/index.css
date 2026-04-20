@@ -18,29 +18,180 @@
   }
 }
 
+/* ===== Keyframes ===== */
+@keyframes fadeIn      { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp     { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes scaleIn     { from { opacity: 0; transform: scale(.96) } to { opacity: 1; transform: scale(1) } }
+@keyframes staggerIn   { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes floatY      { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes floatSlow   { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(6px,-10px) scale(1.02) } }
+@keyframes pulseRing   { 0% { transform: scale(.8); opacity: .7 } 100% { transform: scale(2.4); opacity: 0 } }
+@keyframes shimmer     { 0% { background-position: -220% 0 } 100% { background-position: 220% 0 } }
+@keyframes sheen       { 0% { transform: translateX(-120%) skewX(-18deg) } 100% { transform: translateX(220%) skewX(-18deg) } }
+@keyframes spinSlow    { to { transform: rotate(360deg) } }
+@keyframes caretBlink  { 50% { opacity: 0 } }
+@keyframes popIn       { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.1); opacity: 1 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes glowPulse   { 0%,100% { box-shadow: 0 0 0 0 rgba(124,185,232,.5), 0 0 16px -4px rgba(124,185,232,.6) } 50% { box-shadow: 0 0 0 8px rgba(124,185,232,0), 0 0 22px -2px rgba(124,185,232,.9) } }
+@keyframes liftIn      { from { opacity: 0; transform: translateY(18px) scale(.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+@keyframes marquee     { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes scanMove    { 0% { transform: translateY(0) } 50% { transform: translateY(58px) } 100% { transform: translateY(0) } }
+@keyframes heartBurst  { 0% { transform: scale(0); opacity: .9 } 100% { transform: scale(2.4); opacity: 0 } }
+
 @layer utilities {
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
+  .animate-fadeIn    { animation: fadeIn .35s ease-out both; }
+  .animate-slideUp   { animation: slideUp .45s ease-out both; }
+  .animate-scaleIn   { animation: scaleIn .3s ease-out both; }
+  .animate-staggerIn { animation: staggerIn .4s ease-out both; }
+  .animate-liftIn    { animation: liftIn .5s cubic-bezier(.2,.7,.2,1) both; }
+  .animate-popIn     { animation: popIn .45s cubic-bezier(.2,.7,.2,1) both; }
 
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(24px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .anim-float       { animation: floatY 4.5s ease-in-out infinite; }
+  .anim-float-slow  { animation: floatSlow 7s ease-in-out infinite; }
+  .anim-spin-slow   { animation: spinSlow 14s linear infinite; }
+}
 
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-  }
+/* ===== Scroll reveal ===== */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.in { opacity: 1; transform: translateY(0); }
+.reveal.stagger > * { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s cubic-bezier(.2,.7,.2,1); }
+.reveal.in.stagger > * { opacity: 1; transform: translateY(0); }
+.reveal.in.stagger > *:nth-child(1) { transition-delay: .04s }
+.reveal.in.stagger > *:nth-child(2) { transition-delay: .10s }
+.reveal.in.stagger > *:nth-child(3) { transition-delay: .16s }
+.reveal.in.stagger > *:nth-child(4) { transition-delay: .22s }
+.reveal.in.stagger > *:nth-child(5) { transition-delay: .28s }
+.reveal.in.stagger > *:nth-child(6) { transition-delay: .34s }
+.reveal.in.stagger > *:nth-child(7) { transition-delay: .40s }
+.reveal.in.stagger > *:nth-child(8) { transition-delay: .46s }
 
-  @keyframes staggerIn {
-    from { opacity: 0; transform: translateY(16px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+/* ===== Meal card hover + macro strip ===== */
+.meal-card {
+  position: relative; overflow: hidden;
+  transition: transform .45s cubic-bezier(.2,.7,.2,1), box-shadow .45s ease, border-color .45s ease;
+  will-change: transform;
+}
+.meal-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px -18px rgba(26,26,26,.28); border-color: #7CB9E8; }
+.meal-card .meal-img { transition: transform 1.2s cubic-bezier(.2,.7,.2,1), filter .4s ease; }
+.meal-card:hover .meal-img { transform: scale(1.08); filter: saturate(1.08); }
+.meal-card .macro-strip {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+  padding: 40px 16px 14px; color: #fff;
+  transform: translateY(calc(100% - 54px));
+  transition: transform .5s cubic-bezier(.2,.7,.2,1);
+  pointer-events: none;
+}
+.meal-card:hover .macro-strip { transform: translateY(0); }
+@media (hover: none) {
+  .meal-card .macro-strip { transform: translateY(calc(100% - 54px)); }
+  .meal-card:active .macro-strip { transform: translateY(0); }
+}
 
-  .animate-fadeIn { animation: fadeIn 0.35s ease-out both; }
-  .animate-slideUp { animation: slideUp 0.45s ease-out both; }
-  .animate-scaleIn { animation: scaleIn 0.3s ease-out both; }
-  .animate-staggerIn { animation: staggerIn 0.4s ease-out both; }
+/* ===== Sheen shine on buttons ===== */
+.sheen { position: relative; overflow: hidden; }
+.sheen::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+.sheen:hover::after { animation: sheen 1.1s ease-out; }
+
+/* ===== Glow CTA ===== */
+.glow-cta { animation: glowPulse 2.6s ease-in-out infinite; }
+
+/* ===== Typewriter caret ===== */
+.caret {
+  display: inline-block; width: 2px; height: 1em; vertical-align: -2px;
+  background: #D4522A; margin-left: 2px;
+  animation: caretBlink 1s steps(1) infinite;
+}
+
+/* ===== Scanning AI box ===== */
+.scan-wrap { position: relative; overflow: hidden; border-radius: 14px; }
+.scan-wrap::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #7CB9E8, transparent);
+  animation: scanMove 2.4s ease-in-out infinite;
+}
+
+/* ===== Live pulse dot ===== */
+.live-dot { position: relative; width: 8px; height: 8px; border-radius: 999px; background: #2D6A4F; display: inline-block; }
+.live-dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: 999px; background: #2D6A4F;
+  animation: pulseRing 1.8s ease-out infinite;
+}
+
+/* ===== Skeleton shimmer ===== */
+.skel {
+  background: linear-gradient(90deg, #EFEDE8 0%, #F7F5F0 50%, #EFEDE8 100%);
+  background-size: 220% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 10px;
+}
+
+/* ===== Pulse bar (vendor meal-count bars) ===== */
+.pulse-bar { width: 0; transition: width 1s cubic-bezier(.2,.7,.2,1); }
+.reveal.in .pulse-bar { width: var(--w); }
+
+/* ===== Floating ovals (hero decor) ===== */
+.oval {
+  position: absolute; border-radius: 999px; filter: blur(22px); opacity: .5;
+  animation: floatSlow 10s ease-in-out infinite; pointer-events: none;
+}
+
+/* ===== Expandable panel (admin vendor rows, superadmin details) ===== */
+.panel-expand { overflow: hidden; transition: grid-template-rows .4s cubic-bezier(.2,.7,.2,1); display: grid; grid-template-rows: 0fr; }
+.panel-expand.is-open { grid-template-rows: 1fr; }
+.panel-expand > .panel-inner { min-height: 0; }
+
+/* ===== Marquee ===== */
+.marquee { display: flex; gap: 48px; align-items: center; animation: marquee 38s linear infinite; width: max-content; }
+.marquee:hover { animation-play-state: paused; }
+
+/* ===== Pill filter with sliding indicator ===== */
+.pill-row { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.pill-row::-webkit-scrollbar { display: none; }
+.pill {
+  position: relative; z-index: 2;
+  padding: 10px 16px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; color: #8C8070;
+  transition: color .3s ease;
+  cursor: pointer; white-space: nowrap; border: 0; background: transparent;
+}
+.pill.active { color: #fff; }
+.pill-indicator {
+  position: absolute; top: 4px; left: 0; height: calc(100% - 8px);
+  background: #7CB9E8; border-radius: 10px;
+  box-shadow: 0 8px 22px -6px rgba(124,185,232,.7);
+  transition: transform .45s cubic-bezier(.2,.7,.2,1), width .45s cubic-bezier(.2,.7,.2,1);
+  z-index: 1;
+}
+
+/* ===== Macro rings (draw on scroll) ===== */
+.svg-ring { transform: rotate(-90deg); }
+.ring-track { stroke: #E8E3DA; }
+.ring-fill {
+  stroke-linecap: round; fill: none;
+  stroke-dasharray: var(--circ);
+  stroke-dashoffset: var(--circ);
+  transition: stroke-dashoffset 1.4s cubic-bezier(.2,.7,.2,1);
+}
+.reveal.in .ring-fill { stroke-dashoffset: var(--target); }
+
+/* ===== Hero mini macro bars ===== */
+.macro-bar { height: 8px; border-radius: 999px; background: #EFEDE8; overflow: hidden; position: relative; }
+.macro-bar > span { display: block; height: 100%; width: 0; border-radius: 999px; transition: width 1.3s cubic-bezier(.2,.7,.2,1); }
+.reveal.in .macro-bar > span.w-p { width: 72%; background: #2D6A4F; }
+.reveal.in .macro-bar > span.w-c { width: 56%; background: #7CB9E8; }
+.reveal.in .macro-bar > span.w-f { width: 38%; background: #D4522A; }
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
 }

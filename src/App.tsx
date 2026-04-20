@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Agentation } from 'agentation';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import VendorGrid from './pages/VendorGrid';
+import Homepage from './pages/Homepage';
 import RestaurantPage from './pages/RestaurantPage';
 import Login from './pages/Login';
 import AuthRedirect from './components/AuthRedirect';
@@ -41,7 +41,7 @@ function App() {
       )}
       <Routes>
         {/* Public */}
-        <Route path="/" element={<VendorGrid />} />
+        <Route path="/" element={<Homepage />} />
         <Route path="/restaurant/:vendorId" element={<RestaurantPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth-redirect" element={<AuthRedirect />} />

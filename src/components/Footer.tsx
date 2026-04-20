@@ -11,7 +11,7 @@ export default function Footer() {
           <span className="font-display text-xl font-semibold italic text-primary">bloo</span>
         </div>
         <p className="text-ink-muted text-xs text-center font-medium">
-          Thoughtfully curated, nutrition-focused meals
+          Learn about all that Loma Linda has to offer
         </p>
         <a
           href="https://instagram.com"

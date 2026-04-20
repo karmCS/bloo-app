@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-2">
           <UtensilsCrossed className="text-primary" size={18} />
-          <span className="text-lg font-bold text-ink font-brand">bloo</span>
+          <span className="font-display text-xl font-semibold italic text-primary">bloo</span>
         </div>
         <p className="text-ink-muted text-xs text-center font-medium">
           Thoughtfully curated, nutrition-focused meals

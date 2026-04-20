@@ -5,7 +5,7 @@ import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
-import { Trash2, Plus, LogOut, UserCog, ChevronLeft } from 'lucide-react';
+import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles } from 'lucide-react';
 
 const INPUT = 'w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors';
 const LABEL = 'block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1.5';
@@ -200,9 +200,13 @@ export default function VendorPanel() {
           </div>
           <div className="flex items-center gap-2">
             {isSuperadmin && (
-              <Button variant="secondary" className="text-sm py-2" onClick={() => navigate('/admin')}>
-                <ChevronLeft size={15} className="mr-1" /> Admin panel
-              </Button>
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="font-display italic text-sm text-ink-muted hover:text-ink transition-colors inline-flex items-center gap-1"
+              >
+                <ChevronLeft size={14} /> return to admin panel
+              </button>
             )}
             <Button variant="secondary" className="text-sm py-2" onClick={() => setShowProfile(true)}>
               <UserCog size={15} className="mr-1.5" /> Account
@@ -214,20 +218,23 @@ export default function VendorPanel() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-10 space-y-6">
+      <main className="max-w-6xl mx-auto px-6 py-10 space-y-6 animate-fadeIn">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-2xl font-semibold text-ink">Menu</h2>
-            <p className="text-ink-muted text-sm mt-0.5">{meals.length} {meals.length === 1 ? 'dish' : 'dishes'}</p>
+            <p className="text-ink-muted text-sm mt-0.5 inline-flex items-center gap-2">
+              <span className="live-dot" />
+              {meals.length} {meals.length === 1 ? 'dish' : 'dishes'} · catalog-only
+            </p>
           </div>
-          <Button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} className="flex items-center gap-2">
+          <Button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} className="sheen flex items-center gap-2">
             <Plus size={16} />{showForm ? 'Cancel' : 'Add meal'}
           </Button>
         </div>
 
         {/* Meal form */}
         {showForm && (
-          <div className={`${card} p-6`}>
+          <div className={`${card} p-6 animate-liftIn`}>
             <h3 className="font-display text-lg font-semibold text-ink mb-5">
               {editingMeal ? 'Edit meal' : 'New meal'}
             </h3>
@@ -250,11 +257,14 @@ export default function VendorPanel() {
                   <div>
                     <label className={LABEL}>Price (USD)</label>
                     <input className={INPUT} type="number" step="0.01" min="0" value={formData.price} onChange={e => setFormData(d => ({ ...d, price: e.target.value }))} required placeholder="12.99" />
+                    <p className="text-[10px] text-ink-faint mt-1">Displayed for reference — bloo is catalog-only.</p>
                   </div>
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input type="checkbox" checked={formData.is_meal_of_week} onChange={e => setFormData(d => ({ ...d, is_meal_of_week: e.target.checked }))} className="w-4 h-4 accent-primary rounded" />
-                    <span className="text-sm font-medium text-ink">Meal of the week</span>
-                  </label>
+                  {isSuperadmin && (
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" checked={formData.is_meal_of_week} onChange={e => setFormData(d => ({ ...d, is_meal_of_week: e.target.checked }))} className="w-4 h-4 accent-primary rounded" />
+                      <span className="text-sm font-medium text-ink">Meal of the week</span>
+                    </label>
+                  )}
                 </div>
                 <div className="space-y-4 lg:col-span-8">
                   <div>
@@ -278,9 +288,10 @@ export default function VendorPanel() {
                     <button
                       type="button"
                       onClick={() => setShowMacroModal(true)}
-                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors"
+                      className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary-active border border-primary rounded-lg hover:bg-primary/10 transition-colors"
                     >
-                      ✦ Estimate macros
+                      <Sparkles size={11} className="anim-spin-slow" />
+                      Estimate with AI
                     </button>
                   </div>
                   <div>
@@ -353,23 +364,44 @@ export default function VendorPanel() {
 
       {/* Macro estimation modal */}
       {showMacroModal && (
-        <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }}>
-          <div onClick={e => e.stopPropagation()} className="bg-card rounded-2xl border border-line p-6 w-full max-w-sm">
-            <h3 className="font-display text-lg font-semibold text-ink mb-4">Estimate macros</h3>
-            <p className="text-sm text-ink-muted mb-4">Describe the meal ingredients and we'll estimate the nutritional values.</p>
-            <textarea
-              value={macroInput}
-              onChange={e => { setMacroInput(e.target.value); setMacroError(null); }}
-              placeholder="e.g., 2 cups chicken breast, 1 cup brown rice, steamed broccoli"
-              rows={4}
-              className={INPUT}
-            />
-            {macroError && <span className="block mt-3 text-xs text-accent">{macroError}</span>}
-            <div className="flex gap-3 mt-5">
-              <Button onClick={estimateMacros} disabled={isEstimating || !macroInput.trim()}>
-                {isEstimating ? 'Estimating…' : 'Estimate'}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }} disabled={isEstimating}>Cancel</Button>
+        <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn" onClick={() => { if (!isEstimating) { setShowMacroModal(false); setMacroError(null); setMacroInput(''); } }}>
+          <div onClick={e => e.stopPropagation()} className="bg-card rounded-2xl border border-line w-full max-w-md animate-liftIn shadow-2xl">
+            <div className="p-5 border-b border-line flex items-center gap-2">
+              <Sparkles size={18} className="text-primary anim-spin-slow" />
+              <h3 className="font-display text-lg font-semibold text-ink">Estimate macros</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-ink-muted">Describe the meal ingredients and we'll estimate the nutrition. Powered by Claude.</p>
+              <div className={isEstimating ? 'scan-wrap bg-card border border-line rounded-xl p-3 text-sm leading-relaxed text-ink' : ''}>
+                {isEstimating ? (
+                  <div>{macroInput}<span className="caret" /></div>
+                ) : (
+                  <textarea
+                    value={macroInput}
+                    onChange={e => { setMacroInput(e.target.value); setMacroError(null); }}
+                    placeholder="e.g., 2 cups chicken breast, 1 cup brown rice, steamed broccoli"
+                    rows={4}
+                    className={INPUT}
+                  />
+                )}
+              </div>
+              {macroError && <span className="block text-xs text-accent">{macroError}</span>}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={estimateMacros}
+                  disabled={isEstimating || !macroInput.trim()}
+                  className={`glow-cta px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isEstimating ? '' : 'hover:bg-primary-hover'} transition-colors`}
+                >
+                  <Sparkles size={13} className={isEstimating ? 'animate-spin' : 'anim-spin-slow'} />
+                  {isEstimating ? 'Estimating…' : 'Estimate'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }}
+                  disabled={isEstimating}
+                  className="px-4 py-2.5 rounded-xl bg-card border border-line text-sm font-semibold text-ink hover:bg-surface transition-colors disabled:opacity-50"
+                >Cancel</button>
+              </div>
             </div>
           </div>
         </div>

@@ -121,9 +121,24 @@ export default function VendorGrid() {
             ))}
           </div>
         )}
+
+        {/* Vendor marquee */}
+        {!loading && vendors.length > 0 && (
+          <div className="mt-16 -mx-6 overflow-hidden border-y border-line bg-surface/40 py-4">
+            <div className="marquee whitespace-nowrap">
+              {[...vendors, ...vendors, ...vendors].map((v, i) => (
+                <span key={`${v.id}-${i}`} className="inline-flex items-center gap-3 text-ink-muted font-display text-base">
+                  <span className="w-1 h-1 rounded-full bg-ink-faint" />
+                  <span>{v.name}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <MealDetailModal meal={selectedMeal} isOpen={isModalOpen} onClose={handleCloseModal} />
+
 
       <VendorModal
         vendor={selectedVendor}

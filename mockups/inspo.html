@@ -1,0 +1,1724 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>bloo — animation inspo</title>
+  <link rel="icon" type="image/svg+xml" href="../public/favicon-minimal.svg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Epilogue:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    // Tailwind config — mirrors production tailwind.config.js exactly
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans:    ['Epilogue', 'system-ui', 'sans-serif'],
+            brand:   ['Fraunces', 'Georgia', 'serif'],
+            display: ['Fraunces', 'Georgia', 'serif'],
+          },
+          colors: {
+            primary:          '#7CB9E8',
+            'primary-hover':  '#5FA8DF',
+            'primary-active': '#4A97D0',
+            accent:           '#D4522A',
+            'macro-green':    '#2D6A4F',
+            page:             '#F7F5F0',
+            card:             '#FFFFFF',
+            surface:          '#EFEDE8',
+            line:             '#E8E3DA',
+            ink:              '#1A1A1A',
+            'ink-muted':      '#8C8070',
+            'ink-faint':      '#B5AFA6',
+          },
+          boxShadow: {
+            soft: '0 1px 2px rgba(26,26,26,.04), 0 4px 16px rgba(26,26,26,.06)',
+            pop:  '0 8px 24px rgba(124,185,232,.35)',
+            lift: '0 18px 40px -16px rgba(26,26,26,.25)',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    html, body { background: #ECE7DA; color: #1A1A1A; }
+    body { font-family: 'Epilogue', system-ui, sans-serif; }
+
+    /* ===== Browser frame (scales on mobile) ===== */
+    .frame {
+      width: 100%; max-width: 1240px;
+      margin: 0 auto;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #F7F5F0;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.06);
+      border: 1px solid #E8E3DA;
+    }
+    .screen-label {
+      max-width: 1240px; margin: 0 auto 14px;
+      display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .screen-label h2 { font-family: Fraunces, serif; font-size: clamp(20px, 3.2vw, 26px); font-weight: 600; letter-spacing: -.01em; }
+    .screen-label .kicker { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #D4522A; margin-bottom: 6px; }
+    .screen-label p { font-size: 13px; color: #8C8070; max-width: 520px; }
+    @media (min-width: 720px) { .screen-label p { text-align: right; } }
+    .section-pad { padding: clamp(32px, 6vw, 64px) clamp(16px, 3vw, 24px); }
+
+    /* ===== Mobile-browser frame (for mobile web preview) ===== */
+    .mobile-browser {
+      width: 100%; max-width: 380px;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #F7F5F0;
+      border: 1px solid #E8E3DA;
+      box-shadow: 0 20px 50px -12px rgba(0,0,0,.22);
+      display: flex; flex-direction: column;
+    }
+    .mobile-chrome {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      background: #FFFFFF;
+      border-bottom: 1px solid #E8E3DA;
+      font-size: 11px; color: #8C8070;
+    }
+    .mobile-chrome .url-pill {
+      flex: 1;
+      background: #F7F5F0; border: 1px solid #E8E3DA;
+      border-radius: 999px; padding: 5px 12px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-weight: 500;
+    }
+    .mobile-chrome .chrome-dot {
+      width: 5px; height: 5px; border-radius: 999px; background: #B5AFA6;
+    }
+
+    /* ============================================================ */
+    /* KEYFRAMES                                                     */
+    /* ============================================================ */
+    @keyframes floatY    { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+    @keyframes floatSlow { 0%,100% { transform: translateY(0) rotate(0deg) } 50% { transform: translateY(-10px) rotate(2deg) } }
+    @keyframes pulseRing { 0% { transform: scale(.8); opacity: .55 } 80% { transform: scale(1.6); opacity: 0 } 100% { transform: scale(1.6); opacity: 0 } }
+    @keyframes shimmer   { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+    @keyframes sheen     { 0% { transform: translateX(-120%) skewX(-18deg) } 100% { transform: translateX(220%) skewX(-18deg) } }
+    @keyframes spinSlow  { to { transform: rotate(360deg) } }
+    @keyframes caretBlink { 0%, 60% { opacity: 1 } 61%, 100% { opacity: 0 } }
+    @keyframes popIn {
+      0%   { opacity: 0; transform: translateY(8px) scale(.96) }
+      60%  { opacity: 1; transform: translateY(-2px) scale(1.02) }
+      100% { opacity: 1; transform: translateY(0) scale(1) }
+    }
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(124,185,232,.45), 0 8px 24px rgba(124,185,232,.35) }
+      50%      { box-shadow: 0 0 0 10px rgba(124,185,232,0),  0 8px 24px rgba(124,185,232,.35) }
+    }
+    @keyframes gradSlide { 0%, 100% { background-position: 0% 50% } 50% { background-position: 100% 50% } }
+    @keyframes liftIn    { from { opacity: 0; transform: translateY(18px) scale(.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+    @keyframes marquee   { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+    @keyframes scanMove  { 0% { transform: translateY(0) } 50% { transform: translateY(58px) } 100% { transform: translateY(0) } }
+    @keyframes heartBurst { 0% { transform: scale(0); opacity: .9 } 100% { transform: scale(2.4); opacity: 0 } }
+    @keyframes toastIn   { from { opacity: 0; transform: translateY(20px) scale(.96) } to { opacity: 1; transform: translateY(0) scale(1) } }
+    @keyframes toastOut  { to { opacity: 0; transform: translateY(8px) scale(.98) } }
+
+    /* ===== Scroll reveal ===== */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+    .reveal.stagger > * { opacity: 0; transform: translateY(18px); transition: opacity .55s ease, transform .55s cubic-bezier(.2,.7,.2,1); }
+    .reveal.in.stagger > * { opacity: 1; transform: translateY(0); }
+    .reveal.in.stagger > *:nth-child(1) { transition-delay: .04s }
+    .reveal.in.stagger > *:nth-child(2) { transition-delay: .10s }
+    .reveal.in.stagger > *:nth-child(3) { transition-delay: .16s }
+    .reveal.in.stagger > *:nth-child(4) { transition-delay: .22s }
+    .reveal.in.stagger > *:nth-child(5) { transition-delay: .28s }
+    .reveal.in.stagger > *:nth-child(6) { transition-delay: .34s }
+
+    .anim-float      { animation: floatY 4.5s ease-in-out infinite; }
+    .anim-float-slow { animation: floatSlow 7s ease-in-out infinite; }
+    .anim-spin-slow  { animation: spinSlow 14s linear infinite; }
+    .anim-grad-flow {
+      background-image: linear-gradient(120deg, #7CB9E8, #D4522A, #2D6A4F, #7CB9E8);
+      background-size: 220% 220%;
+      animation: gradSlide 9s ease-in-out infinite;
+    }
+    .sheen { position: relative; overflow: hidden; }
+    .sheen::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%);
+      transform: translateX(-120%) skewX(-18deg);
+    }
+    .sheen:hover::after { animation: sheen 1.1s ease-out; }
+    .glow-cta { animation: glowPulse 2.6s ease-in-out infinite; }
+
+    /* Macro ring draw */
+    .ring { transform: rotate(-90deg); }
+    .ring-track { stroke: #E8E3DA; }
+    .ring-fill {
+      stroke-linecap: round; fill: none;
+      stroke-dasharray: var(--circ);
+      stroke-dashoffset: var(--circ);
+      transition: stroke-dashoffset 1.4s cubic-bezier(.2,.7,.2,1);
+    }
+    .reveal.in .ring-fill { stroke-dashoffset: var(--target); }
+
+    /* Meal card hover */
+    .meal-card {
+      position: relative; overflow: hidden;
+      transition: transform .45s cubic-bezier(.2,.7,.2,1), box-shadow .45s ease, border-color .45s ease;
+      will-change: transform;
+    }
+    .meal-card:hover { transform: translateY(-6px); box-shadow: 0 22px 44px -18px rgba(26,26,26,.28); border-color: #7CB9E8; }
+    .meal-card .img { transition: transform 1.2s cubic-bezier(.2,.7,.2,1), filter .4s ease; }
+    .meal-card:hover .img { transform: scale(1.08); filter: saturate(1.08); }
+    .meal-card .badge-hover {
+      position: absolute; top: 12px; right: 12px;
+      opacity: 0; transform: translateY(-6px);
+      transition: opacity .3s ease, transform .3s ease;
+    }
+    .meal-card:hover .badge-hover { opacity: 1; transform: translateY(0); }
+    .meal-card .macro-strip {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.55));
+      padding: 40px 16px 14px; color: #fff;
+      transform: translateY(calc(100% - 54px));
+      transition: transform .5s cubic-bezier(.2,.7,.2,1);
+    }
+    .meal-card:hover .macro-strip { transform: translateY(0); }
+    /* On touch devices, always show the macro strip (no hover) */
+    @media (hover: none) {
+      .meal-card .macro-strip { transform: translateY(calc(100% - 54px)); }
+      .meal-card:active .macro-strip { transform: translateY(0); }
+      .meal-card .badge-hover { display: none; }
+    }
+
+    /* Pill filter with sliding indicator */
+    .pill-row { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .pill-row::-webkit-scrollbar { display: none; }
+    .pill {
+      position: relative; z-index: 2;
+      padding: 10px 16px; border-radius: 14px;
+      font-size: 13px; font-weight: 600; color: #8C8070;
+      transition: color .3s ease;
+      cursor: pointer; white-space: nowrap; border: 0; background: transparent;
+    }
+    .pill.active { color: #fff; }
+    .pill-indicator {
+      position: absolute; top: 4px; left: 0; height: calc(100% - 8px);
+      background: #7CB9E8; border-radius: 12px;
+      box-shadow: 0 8px 22px -6px rgba(124,185,232,.7);
+      transition: transform .45s cubic-bezier(.2,.7,.2,1), width .45s cubic-bezier(.2,.7,.2,1);
+      z-index: 1;
+    }
+
+    .caret { display: inline-block; width: 2px; height: 1em; vertical-align: -2px; background: #D4522A; margin-left: 2px; animation: caretBlink 1s steps(1) infinite; }
+
+    .scan-wrap { position: relative; overflow: hidden; border-radius: 14px; }
+    .scan-wrap::after {
+      content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, #7CB9E8, transparent);
+      animation: scanMove 2.4s ease-in-out infinite;
+    }
+
+    .live-dot { position: relative; width: 8px; height: 8px; border-radius: 999px; background: #2D6A4F; display: inline-block; }
+    .live-dot::after {
+      content: ""; position: absolute; inset: 0; border-radius: 999px; background: #2D6A4F;
+      animation: pulseRing 1.8s ease-out infinite;
+    }
+
+    .skel {
+      background: linear-gradient(90deg, #EFEDE8 0%, #F7F5F0 50%, #EFEDE8 100%);
+      background-size: 220% 100%;
+      animation: shimmer 1.4s linear infinite;
+      border-radius: 10px;
+    }
+
+    .macro-bar { height: 8px; border-radius: 999px; background: #EFEDE8; overflow: hidden; position: relative; }
+    .macro-bar > span { display: block; height: 100%; width: 0; border-radius: 999px; transition: width 1.3s cubic-bezier(.2,.7,.2,1); }
+    .reveal.in .macro-bar > span.w-p { width: 72%; background: #2D6A4F; }
+    .reveal.in .macro-bar > span.w-c { width: 56%; background: #7CB9E8; }
+    .reveal.in .macro-bar > span.w-f { width: 38%; background: #D4522A; }
+
+    .oval { position: absolute; border-radius: 999px; filter: blur(22px); opacity: .5; animation: floatSlow 10s ease-in-out infinite; pointer-events: none; }
+
+    .marquee { display: flex; gap: 48px; align-items: center; animation: marquee 38s linear infinite; width: max-content; }
+    .marquee:hover { animation-play-state: paused; }
+
+    .heart-burst { position: absolute; inset: 0; border-radius: 999px; border: 2px solid #D4522A; animation: heartBurst .6s ease-out forwards; }
+    .heart-filled { fill: #D4522A; stroke: #D4522A; animation: popIn .45s cubic-bezier(.2,.7,.2,1); }
+    .toast { animation: toastIn .35s cubic-bezier(.2,.7,.2,1); }
+    .toast.out { animation: toastOut .3s ease-out forwards; }
+
+    /* Admin panel tabs */
+    .admin-panel[hidden] { display: none; }
+    .admin-tab { cursor: pointer; border: 0; background: transparent; transition: color .25s ease; }
+    .admin-tab:hover { color: #1A1A1A; }
+
+    /* Pulse bars: fill on reveal */
+    .pulse-bar { width: 0; }
+    .reveal.in .pulse-bar { width: var(--w); }
+
+    /* Vendor expand/collapse */
+    .vendor-row .vendor-body {
+      max-height: 0; opacity: 0; overflow: hidden;
+      transition: max-height .45s cubic-bezier(.2,.7,.2,1), opacity .3s ease, padding .3s ease;
+      padding-top: 0; padding-bottom: 0;
+    }
+    .vendor-row.is-open .vendor-body {
+      max-height: 900px; opacity: 1;
+      padding-top: 1.25rem; padding-bottom: 1.25rem;
+    }
+    .vendor-row.is-open .vendor-chev { transform: rotate(180deg); }
+
+    /* Meals tbody row stagger */
+    .meal-row { opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.7,.2,1); }
+    .meal-row.in { opacity: 1; transform: translateY(0); }
+
+    /* Modal */
+    #macroModal[hidden] { display: none; }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+    }
+  </style>
+</head>
+<body class="font-sans text-ink">
+
+  <!-- Header -->
+  <div class="max-w-[1240px] mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-4 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-primary text-white flex items-center justify-center shadow-pop anim-float shrink-0">
+        <svg width="22" height="22" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <line x1="16" y1="28" x2="16" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+          <path d="M16 21 C12 17, 6 18, 6 13 C10 11, 16 15, 16 21 Z" fill="#fff" opacity="0.75"/>
+          <path d="M16 16 C20 12, 27 13, 27 8 C23 6, 16 11, 16 16 Z" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <div class="font-brand text-2xl sm:text-3xl font-semibold tracking-tight text-ink leading-none truncate">bloo <span class="text-accent">/</span> <span class="text-ink-muted text-base sm:text-lg">inspo</span></div>
+        <div class="text-xs sm:text-sm text-ink-muted mt-1 truncate">Motion-first prototypes — same palette as production</div>
+      </div>
+    </div>
+    <a href="./index.html" class="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-line bg-card text-sm font-semibold text-ink-muted hover:text-ink hover:bg-surface transition-colors shrink-0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Static mockups
+    </a>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 1 · HERO                                                              -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">01 · Hero</div>
+        <h2>Editorial hero with breathing gradients</h2>
+      </div>
+      <p>Serif wordmark fades in; blurred color ovals drift; CTA pulses with a soft primary halo.</p>
+    </div>
+
+    <div class="frame relative overflow-hidden">
+      <div class="oval" style="width: 360px; height: 360px; background: #7CB9E8; top:-80px; left:-60px; animation-delay: -2s"></div>
+      <div class="oval" style="width: 260px; height: 260px; background: #D4522A; top: 180px; right: -60px; animation-delay: -5s"></div>
+      <div class="oval" style="width: 200px; height: 200px; background: #2D6A4F; bottom: -40px; left: 40%; opacity: .32; animation-delay: -3s"></div>
+
+      <div class="relative px-6 sm:px-10 lg:px-12 py-12 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        <div class="lg:col-span-7 reveal stagger">
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur border border-line text-[11px] font-bold uppercase tracking-widest text-ink">
+            <span class="live-dot"></span>
+            12 vendors cooking this week
+          </span>
+          <h1 class="font-brand font-semibold tracking-tight text-ink mt-5 sm:mt-6" style="font-size: clamp(40px, 7vw, 72px); line-height: .95;">
+            Eat well.<br/>
+            <span class="italic text-accent">Know</span> what's in it.
+          </h1>
+          <p class="text-ink-muted text-base sm:text-lg mt-4 sm:mt-5 max-w-md">
+            Locally cooked meals, every macro counted. No guessing, no apps to download — just honest food, from kitchens down the street.
+          </p>
+          <div class="mt-7 sm:mt-8 flex flex-wrap items-center gap-3">
+            <button class="glow-cta px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-primary text-white text-sm font-bold sheen">See this week's menu →</button>
+            <button class="px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl bg-card border border-line text-sm font-semibold text-ink hover:bg-surface transition-colors">How it works</button>
+          </div>
+          <div class="mt-7 sm:mt-8 flex items-center gap-4 sm:gap-5">
+            <div class="flex -space-x-2">
+              <div class="w-8 h-8 rounded-full bg-macro-green/15 border-2 border-card flex items-center justify-center text-[10px] font-bold text-macro-green">OS</div>
+              <div class="w-8 h-8 rounded-full bg-primary/15 border-2 border-card flex items-center justify-center text-[10px] font-bold text-primary-active">BT</div>
+              <div class="w-8 h-8 rounded-full bg-accent/15 border-2 border-card flex items-center justify-center text-[10px] font-bold text-accent">RK</div>
+              <div class="w-8 h-8 rounded-full bg-surface border-2 border-card flex items-center justify-center text-[10px] font-bold text-ink-muted">+9</div>
+            </div>
+            <div class="text-xs text-ink-muted font-medium">Trusted by 12 neighborhood kitchens</div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 relative h-[380px] sm:h-[440px] reveal">
+          <svg class="absolute -top-4 right-2 sm:right-6 anim-spin-slow" width="220" height="220" viewBox="0 0 120 120" aria-hidden>
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#E8E3DA" stroke-width="2" stroke-dasharray="4 6" />
+          </svg>
+
+          <div class="absolute right-0 top-0 w-[260px] sm:w-[300px] rounded-3xl overflow-hidden shadow-lift border border-line anim-float" style="animation-delay:-1s">
+            <div class="h-40 sm:h-48 relative overflow-hidden">
+              <img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="Mediterranean bowl" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              <span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-accent text-white text-[10px] font-bold uppercase tracking-widest">Meal of the week</span>
+            </div>
+            <div class="p-4 bg-card">
+              <div class="font-brand text-lg font-semibold leading-tight">Mediterranean bowl</div>
+              <div class="text-xs text-ink-muted mt-0.5">Olive &amp; Stone · 0.6 mi</div>
+              <div class="flex gap-1.5 mt-3 flex-wrap">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">38g P</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">42g C</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">22g F</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="absolute left-0 bottom-0 w-[220px] sm:w-[240px] rounded-3xl bg-card border border-line shadow-lift p-4 anim-float-slow">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Today's totals</div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green shrink-0">+14g</span>
+            </div>
+            <div class="font-brand text-3xl font-semibold mt-2">1,840<span class="text-base text-ink-muted font-normal ml-1">kcal</span></div>
+            <div class="mt-3 space-y-2">
+              <div class="flex items-center gap-2"><span class="text-[10px] w-4 text-ink-muted font-bold">P</span><div class="macro-bar flex-1 reveal in"><span class="w-p"></span></div></div>
+              <div class="flex items-center gap-2"><span class="text-[10px] w-4 text-ink-muted font-bold">C</span><div class="macro-bar flex-1 reveal in"><span class="w-c"></span></div></div>
+              <div class="flex items-center gap-2"><span class="text-[10px] w-4 text-ink-muted font-bold">F</span><div class="macro-bar flex-1 reveal in"><span class="w-f"></span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 2 · MEAL GRID                                                         -->
+  <!-- ==================================================================== -->
+  <div class="section-pad" style="background: #F7F5F0;">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">02 · Grid</div>
+        <h2>Meal cards — hover reveals macros</h2>
+      </div>
+      <p>Image zooms, favorite drops in, macro strip slides up. On touch, tap-and-hold reveals the strip — no hover dependency.</p>
+    </div>
+
+    <div class="frame">
+      <div class="p-4 sm:p-6 lg:p-7">
+        <div class="mb-5 sm:mb-6 flex items-center gap-3 overflow-x-auto pill-row">
+          <div class="inline-flex items-center gap-1 p-1 rounded-2xl bg-surface border border-line relative" id="pillRow">
+            <div class="pill-indicator" id="pillIndicator" style="width: 58px; transform: translateX(4px)"></div>
+            <button class="pill active" data-pill>All</button>
+            <button class="pill" data-pill>Olive &amp; Stone</button>
+            <button class="pill" data-pill>Birch Table</button>
+            <button class="pill" data-pill>Rook Kitchen</button>
+            <button class="pill" data-pill>High protein</button>
+            <button class="pill" data-pill>Under 600 cal</button>
+          </div>
+          <div class="ml-auto hidden sm:block text-xs font-semibold text-ink-muted whitespace-nowrap">47 dishes</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 reveal stagger">
+          <!-- 1 -->
+          <div class="meal-card cursor-pointer bg-card rounded-2xl overflow-hidden border border-line">
+            <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+              <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=700&q=80" alt="" />
+              <div class="badge-hover w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-lift">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </div>
+              <div class="macro-strip">
+                <div class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Macros</div>
+                <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs font-bold">
+                  <span>540 kcal</span><span class="opacity-60">·</span><span>38g P</span><span class="opacity-60">·</span><span>42g C</span><span class="opacity-60">·</span><span>22g F</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <div class="font-brand text-[15px] font-semibold leading-tight">Mediterranean bowl</div>
+              <div class="text-xs text-ink-muted mt-0.5">Olive &amp; Stone</div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">38g P</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">42g C</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">22g F</span>
+              </div>
+            </div>
+          </div>
+          <!-- 2 -->
+          <div class="meal-card cursor-pointer bg-card rounded-2xl overflow-hidden border border-line">
+            <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+              <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&q=80" alt="" />
+              <div class="badge-hover w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-lift">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </div>
+              <div class="macro-strip">
+                <div class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Macros</div>
+                <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs font-bold">
+                  <span>620 kcal</span><span class="opacity-60">·</span><span>44g P</span><span class="opacity-60">·</span><span>52g C</span><span class="opacity-60">·</span><span>24g F</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <div class="font-brand text-[15px] font-semibold leading-tight">Salmon rice bowl</div>
+              <div class="text-xs text-ink-muted mt-0.5">Birch Table</div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">44g P</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">52g C</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">24g F</span>
+              </div>
+            </div>
+          </div>
+          <!-- 3 -->
+          <div class="meal-card cursor-pointer bg-card rounded-2xl overflow-hidden border border-line">
+            <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+              <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=700&q=80" alt="" />
+              <div class="badge-hover w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-lift">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </div>
+              <div class="macro-strip">
+                <div class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Macros</div>
+                <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs font-bold">
+                  <span>480 kcal</span><span class="opacity-60">·</span><span>28g P</span><span class="opacity-60">·</span><span>54g C</span><span class="opacity-60">·</span><span>16g F</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <div class="font-brand text-[15px] font-semibold leading-tight">Avocado toast plate</div>
+              <div class="text-xs text-ink-muted mt-0.5">Rook Kitchen</div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">28g P</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">54g C</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">16g F</span>
+              </div>
+            </div>
+          </div>
+          <!-- 4 -->
+          <div class="meal-card cursor-pointer bg-card rounded-2xl overflow-hidden border border-line">
+            <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+              <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&q=80" alt="" />
+              <div class="badge-hover w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-lift">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </div>
+              <div class="macro-strip">
+                <div class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Macros</div>
+                <div class="flex flex-wrap gap-x-2 gap-y-0.5 text-xs font-bold">
+                  <span>720 kcal</span><span class="opacity-60">·</span><span>52g P</span><span class="opacity-60">·</span><span>48g C</span><span class="opacity-60">·</span><span>34g F</span>
+                </div>
+              </div>
+            </div>
+            <div class="p-4">
+              <div class="font-brand text-[15px] font-semibold leading-tight">Neapolitan margherita</div>
+              <div class="text-xs text-ink-muted mt-0.5">Olive &amp; Stone</div>
+              <div class="flex flex-wrap items-center gap-1.5 mt-3">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">52g P</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">48g C</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">34g F</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 3 · MACRO RINGS                                                       -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">03 · Data viz</div>
+        <h2>Macro rings draw in on scroll</h2>
+      </div>
+      <p>When the card enters the viewport, rings paint from empty to their target — 1.4s easing, no library.</p>
+    </div>
+
+    <div class="frame">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-6 sm:p-8 lg:p-10">
+        <div class="lg:col-span-5 reveal">
+          <div class="text-[11px] font-bold uppercase tracking-widest text-accent mb-2">Meal breakdown</div>
+          <h3 class="font-brand text-3xl sm:text-4xl font-semibold leading-tight">Mediterranean bowl</h3>
+          <p class="text-ink-muted mt-3">Grilled chicken, quinoa, roasted peppers, hummus, cucumber, feta. Estimated from the vendor's ingredient list.</p>
+          <div class="mt-6 flex items-center gap-3 flex-wrap">
+            <div class="font-brand text-5xl font-semibold">540<span class="text-lg text-ink-muted font-normal ml-1">kcal</span></div>
+            <span class="px-2.5 py-1 rounded-md bg-macro-green/10 text-macro-green text-[11px] font-bold">27% of daily</span>
+          </div>
+          <button class="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-ink text-white text-sm font-bold hover:bg-ink/90 transition-colors">
+            See Olive &amp; Stone
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+
+        <div class="lg:col-span-7 grid grid-cols-3 gap-3 sm:gap-4">
+          <div class="reveal bg-card rounded-2xl border border-line p-3 sm:p-5 flex flex-col items-center" style="--circ: 251.2; --target: 70.3">
+            <div class="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px]">
+              <svg class="ring w-full h-full" viewBox="0 0 100 100">
+                <circle class="ring-track" cx="50" cy="50" r="40" stroke-width="8" fill="none"/>
+                <circle class="ring-fill" cx="50" cy="50" r="40" stroke-width="8" stroke="#2D6A4F"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div class="font-brand text-2xl sm:text-3xl font-semibold">38<span class="text-sm text-ink-muted font-normal">g</span></div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Protein</div>
+              </div>
+            </div>
+            <div class="mt-3 text-[11px] sm:text-xs text-ink-muted font-semibold text-center">72% of daily</div>
+          </div>
+          <div class="reveal bg-card rounded-2xl border border-line p-3 sm:p-5 flex flex-col items-center" style="--circ: 251.2; --target: 110.5">
+            <div class="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px]">
+              <svg class="ring w-full h-full" viewBox="0 0 100 100">
+                <circle class="ring-track" cx="50" cy="50" r="40" stroke-width="8" fill="none"/>
+                <circle class="ring-fill" cx="50" cy="50" r="40" stroke-width="8" stroke="#7CB9E8"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div class="font-brand text-2xl sm:text-3xl font-semibold">42<span class="text-sm text-ink-muted font-normal">g</span></div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Carbs</div>
+              </div>
+            </div>
+            <div class="mt-3 text-[11px] sm:text-xs text-ink-muted font-semibold text-center">56% of daily</div>
+          </div>
+          <div class="reveal bg-card rounded-2xl border border-line p-3 sm:p-5 flex flex-col items-center" style="--circ: 251.2; --target: 155.7">
+            <div class="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px]">
+              <svg class="ring w-full h-full" viewBox="0 0 100 100">
+                <circle class="ring-track" cx="50" cy="50" r="40" stroke-width="8" fill="none"/>
+                <circle class="ring-fill" cx="50" cy="50" r="40" stroke-width="8" stroke="#D4522A"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div class="font-brand text-2xl sm:text-3xl font-semibold">22<span class="text-sm text-ink-muted font-normal">g</span></div>
+                <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Fats</div>
+              </div>
+            </div>
+            <div class="mt-3 text-[11px] sm:text-xs text-ink-muted font-semibold text-center">38% of daily</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 4 · AI MACRO ESTIMATION                                               -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">04 · Vendor tool</div>
+        <h2>AI macro estimation — typewriter + scan</h2>
+      </div>
+      <p>Vendor pastes ingredients. An animated scan line sweeps the input while a typewriter streams the AI result.</p>
+    </div>
+
+    <div class="frame">
+      <div class="p-6 sm:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        <div class="lg:col-span-6">
+          <div class="text-[11px] font-bold uppercase tracking-widest text-accent mb-2">New meal</div>
+          <h3 class="font-brand text-2xl sm:text-3xl font-semibold leading-tight">Paste ingredients. We'll do the math.</h3>
+          <p class="text-ink-muted mt-3 text-sm">Powered by Claude. Results are estimates — vendors can tweak before publishing.</p>
+
+          <label class="mt-6 block text-[11px] font-bold uppercase tracking-widest text-ink-muted">Ingredients</label>
+          <div class="scan-wrap mt-2 bg-card border border-line rounded-2xl p-4 text-sm text-ink leading-relaxed min-h-[120px]">
+            6 oz grilled chicken breast<br/>
+            ½ cup cooked quinoa<br/>
+            2 tbsp hummus<br/>
+            ¼ cup cucumber<br/>
+            2 tbsp crumbled feta<br/>
+            <span class="text-ink-muted">drizzle of olive oil</span><span class="caret"></span>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <button class="glow-cta px-5 py-3 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2 sheen">
+              <svg class="anim-spin-slow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              Estimate macros
+            </button>
+            <span class="text-xs text-ink-muted font-medium">⌘ + Enter</span>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6">
+          <div class="bg-card border border-line rounded-2xl p-5 sm:p-6 shadow-soft reveal">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-[11px] font-bold uppercase tracking-widest text-ink-muted">Live result</div>
+              <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-macro-green shrink-0"><span class="live-dot"></span>Streaming</span>
+            </div>
+
+            <div class="mt-4 font-brand text-4xl sm:text-5xl font-semibold">
+              540<span class="text-lg text-ink-muted font-normal ml-1">kcal</span>
+            </div>
+            <div class="text-sm text-ink-muted mt-1">Per serving · 6 ingredients</div>
+
+            <div class="grid grid-cols-3 gap-2 mt-5">
+              <div class="rounded-xl bg-macro-green/10 p-3">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-macro-green">Protein</div>
+                <div class="font-brand text-2xl font-semibold text-macro-green mt-1">38<span class="text-sm font-normal">g</span></div>
+              </div>
+              <div class="rounded-xl bg-primary/10 p-3">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-primary-active">Carbs</div>
+                <div class="font-brand text-2xl font-semibold text-primary-active mt-1">42<span class="text-sm font-normal">g</span></div>
+              </div>
+              <div class="rounded-xl bg-accent/10 p-3">
+                <div class="text-[10px] font-bold uppercase tracking-widest text-accent">Fats</div>
+                <div class="font-brand text-2xl font-semibold text-accent mt-1">22<span class="text-sm font-normal">g</span></div>
+              </div>
+            </div>
+
+            <div class="mt-5 pt-5 border-t border-line">
+              <div class="text-[11px] font-bold uppercase tracking-widest text-ink-muted mb-2">Reasoning</div>
+              <p class="text-sm text-ink leading-relaxed">
+                Chicken provides the bulk of protein with minimal fat. Quinoa contributes complex carbs plus a small amount of plant protein. Hummus and feta add balanced fats<span class="caret"></span>
+              </p>
+            </div>
+
+            <div class="mt-4 flex items-center gap-2 flex-wrap">
+              <button class="px-3 py-1.5 rounded-lg bg-surface border border-line text-[11px] font-bold text-ink hover:bg-card transition-colors">Publish</button>
+              <button class="px-3 py-1.5 rounded-lg bg-card border border-line text-[11px] font-bold text-ink-muted hover:text-ink transition-colors">Adjust manually</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 5 · MARQUEE                                                           -->
+  <!-- ==================================================================== -->
+  <div class="section-pad" style="background: #EFEDE8;">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">05 · Social proof</div>
+        <h2>Vendor marquee — infinite scroll</h2>
+      </div>
+      <p>Smooth continuous loop with edge fades. Pauses on hover (desktop) so the user can read.</p>
+    </div>
+
+    <div class="frame">
+      <div class="relative overflow-hidden py-8 sm:py-10">
+        <div class="absolute top-0 bottom-0 left-0 w-16 sm:w-32 z-10 pointer-events-none" style="background: linear-gradient(90deg, #F7F5F0, transparent);"></div>
+        <div class="absolute top-0 bottom-0 right-0 w-16 sm:w-32 z-10 pointer-events-none" style="background: linear-gradient(270deg, #F7F5F0, transparent);"></div>
+
+        <div class="marquee px-6">
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-macro-green/15 text-macro-green font-bold flex items-center justify-center">OS</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Olive &amp; Stone</div><div class="text-xs text-ink-muted mt-1">Mediterranean · 0.6 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/15 text-primary-active font-bold flex items-center justify-center">BT</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Birch Table</div><div class="text-xs text-ink-muted mt-1">Seafood · 1.1 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-accent/15 text-accent font-bold flex items-center justify-center">RK</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Rook Kitchen</div><div class="text-xs text-ink-muted mt-1">Brunch · 0.8 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-macro-green/15 text-macro-green font-bold flex items-center justify-center">SH</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Saffron House</div><div class="text-xs text-ink-muted mt-1">Indian · 1.4 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/15 text-primary-active font-bold flex items-center justify-center">MG</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Mesa &amp; Grain</div><div class="text-xs text-ink-muted mt-1">Bowls · 0.4 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-accent/15 text-accent font-bold flex items-center justify-center">NA</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Noble Ash</div><div class="text-xs text-ink-muted mt-1">BBQ · 2.0 mi</div></div></div>
+          <!-- dup -->
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-macro-green/15 text-macro-green font-bold flex items-center justify-center">OS</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Olive &amp; Stone</div><div class="text-xs text-ink-muted mt-1">Mediterranean · 0.6 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/15 text-primary-active font-bold flex items-center justify-center">BT</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Birch Table</div><div class="text-xs text-ink-muted mt-1">Seafood · 1.1 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-accent/15 text-accent font-bold flex items-center justify-center">RK</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Rook Kitchen</div><div class="text-xs text-ink-muted mt-1">Brunch · 0.8 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-macro-green/15 text-macro-green font-bold flex items-center justify-center">SH</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Saffron House</div><div class="text-xs text-ink-muted mt-1">Indian · 1.4 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-primary/15 text-primary-active font-bold flex items-center justify-center">MG</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Mesa &amp; Grain</div><div class="text-xs text-ink-muted mt-1">Bowls · 0.4 mi</div></div></div>
+          <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-accent/15 text-accent font-bold flex items-center justify-center">NA</div><div><div class="font-brand text-lg sm:text-xl font-semibold leading-none">Noble Ash</div><div class="text-xs text-ink-muted mt-1">BBQ · 2.0 mi</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 6 · SKELETON → CONTENT                                                -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">06 · Loading</div>
+        <h2>Skeleton shimmer → content pop</h2>
+      </div>
+      <p>Skeletons swap for real cards with a staggered pop-in. Layout is reserved — no jump.</p>
+    </div>
+
+    <div class="frame">
+      <div class="p-6 sm:p-8 lg:p-10">
+        <div class="flex items-center justify-between gap-3 mb-5">
+          <div class="font-brand text-lg sm:text-xl font-semibold">This week near you</div>
+          <button id="reloadBtn" class="px-4 py-2 rounded-xl bg-ink text-white text-xs font-bold hover:bg-ink/90 transition-colors shrink-0">Replay loading</button>
+        </div>
+
+        <div id="skelGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 7 · MOBILE WEB (browser viewports, not native device frames)          -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">07 · Mobile web</div>
+        <h2>How it feels in a mobile browser</h2>
+      </div>
+      <p>Rendered inside simulated mobile browser chrome — same markup as desktop, responsive at 375px. Snap scroll and touch-friendly targets.</p>
+    </div>
+
+    <div class="max-w-[1240px] mx-auto flex flex-wrap justify-center gap-6 lg:gap-8">
+      <!-- Mobile browser 1: home feed -->
+      <div class="mobile-browser reveal" style="min-height: 680px;">
+        <div class="mobile-chrome">
+          <span class="chrome-dot"></span><span class="chrome-dot"></span>
+          <div class="url-pill">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            bloo.app
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </div>
+
+        <div class="flex-1 overflow-y-auto">
+          <div class="px-4 pt-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-pop">
+                <svg width="16" height="16" viewBox="0 0 32 32"><line x1="16" y1="28" x2="16" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M16 21 C12 17, 6 18, 6 13 C10 11, 16 15, 16 21 Z" fill="#fff" opacity="0.75"/><path d="M16 16 C20 12, 27 13, 27 8 C23 6, 16 11, 16 16 Z" fill="#fff"/></svg>
+              </div>
+              <div>
+                <div class="font-brand text-lg font-semibold leading-none">bloo</div>
+                <div class="text-[10px] text-ink-muted mt-0.5 font-medium">Sun, 19 Apr</div>
+              </div>
+            </div>
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-macro-green/10 text-macro-green text-[10px] font-bold"><span class="live-dot"></span>12 live</span>
+          </div>
+
+          <div class="px-4 mt-4">
+            <!-- hero card -->
+            <div class="relative rounded-2xl overflow-hidden border border-line" style="height: 180px;">
+              <img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&q=80" alt="" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+              <span class="absolute top-3 left-3 px-2 py-1 rounded-full bg-accent text-white text-[9px] font-bold uppercase tracking-widest">Meal of the week</span>
+              <div class="absolute bottom-3 left-3 right-3">
+                <div class="font-brand text-xl font-semibold text-white leading-tight">Mediterranean bowl</div>
+                <div class="text-white/80 text-[11px] mt-0.5">Olive &amp; Stone · 540 kcal</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 mt-5">
+            <div class="flex items-center justify-between">
+              <div class="font-brand text-base font-semibold">This week</div>
+              <div class="text-[11px] text-ink-muted font-medium">47 dishes</div>
+            </div>
+
+            <div class="mt-3 flex gap-2 overflow-x-auto pill-row">
+              <button class="shrink-0 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-pop">All</button>
+              <button class="shrink-0 px-3 py-2 rounded-xl bg-card border border-line text-xs font-semibold text-ink-muted">Olive &amp; Stone</button>
+              <button class="shrink-0 px-3 py-2 rounded-xl bg-card border border-line text-xs font-semibold text-ink-muted">High protein</button>
+              <button class="shrink-0 px-3 py-2 rounded-xl bg-card border border-line text-xs font-semibold text-ink-muted">Under 600</button>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <div class="meal-card bg-card rounded-xl overflow-hidden border border-line">
+                <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+                  <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80" alt="" />
+                </div>
+                <div class="p-2.5">
+                  <div class="font-brand text-xs font-semibold leading-tight">Grain bowl</div>
+                  <div class="text-[10px] text-ink-muted mt-0.5">540 kcal · 38g P</div>
+                </div>
+              </div>
+              <div class="meal-card bg-card rounded-xl overflow-hidden border border-line">
+                <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+                  <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80" alt="" />
+                </div>
+                <div class="p-2.5">
+                  <div class="font-brand text-xs font-semibold leading-tight">Salmon bowl</div>
+                  <div class="text-[10px] text-ink-muted mt-0.5">620 kcal · 44g P</div>
+                </div>
+              </div>
+              <div class="meal-card bg-card rounded-xl overflow-hidden border border-line">
+                <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+                  <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=400&q=80" alt="" />
+                </div>
+                <div class="p-2.5">
+                  <div class="font-brand text-xs font-semibold leading-tight">Avocado toast</div>
+                  <div class="text-[10px] text-ink-muted mt-0.5">480 kcal · 28g P</div>
+                </div>
+              </div>
+              <div class="meal-card bg-card rounded-xl overflow-hidden border border-line">
+                <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+                  <img class="img w-full h-full object-cover" src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80" alt="" />
+                </div>
+                <div class="p-2.5">
+                  <div class="font-brand text-xs font-semibold leading-tight">Margherita</div>
+                  <div class="text-[10px] text-ink-muted mt-0.5">720 kcal · 52g P</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom padding so last card isn't against edge -->
+          <div class="h-6"></div>
+        </div>
+      </div>
+
+      <!-- Mobile browser 2: meal detail with rings -->
+      <div class="mobile-browser reveal" style="min-height: 680px;">
+        <div class="mobile-chrome">
+          <span class="chrome-dot"></span><span class="chrome-dot"></span>
+          <div class="url-pill">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            bloo.app/meals/mediterranean-bowl
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </div>
+
+        <div class="flex-1 overflow-y-auto relative">
+          <div class="relative h-52 overflow-hidden">
+            <img class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&q=80" alt="" />
+            <button class="absolute top-3 left-3 w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-soft">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <button class="absolute top-3 right-3 w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-soft">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </button>
+          </div>
+
+          <div class="px-4 pt-4 pb-24">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded-md bg-surface text-ink-muted border border-line">High protein</span>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded-md bg-surface text-ink-muted border border-line">Gluten free</span>
+            </div>
+            <h1 class="font-brand text-2xl font-semibold leading-tight mt-2">Mediterranean bowl</h1>
+            <div class="text-xs text-ink-muted mt-1">by <span class="text-ink font-semibold">Olive &amp; Stone</span> · 0.6 mi</div>
+
+            <div class="mt-5 font-brand text-4xl font-semibold">540<span class="text-base text-ink-muted font-normal ml-1">kcal</span></div>
+
+            <div class="mt-4 grid grid-cols-3 gap-2 reveal in" style="--circ: 251.2; --target: 70.3">
+              <div class="flex flex-col items-center bg-card border border-line rounded-xl p-2">
+                <div class="relative w-16 h-16">
+                  <svg class="ring w-full h-full" viewBox="0 0 100 100">
+                    <circle class="ring-track" cx="50" cy="50" r="40" stroke-width="10" fill="none"/>
+                    <circle class="ring-fill" cx="50" cy="50" r="40" stroke-width="10" stroke="#2D6A4F"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center font-brand text-sm font-semibold">38g</div>
+                </div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted mt-1">Protein</div>
+              </div>
+              <div class="flex flex-col items-center bg-card border border-line rounded-xl p-2" style="--circ: 251.2; --target: 110.5">
+                <div class="relative w-16 h-16">
+                  <svg class="ring w-full h-full" viewBox="0 0 100 100">
+                    <circle class="ring-track" cx="50" cy="50" r="40" stroke-width="10" fill="none"/>
+                    <circle class="ring-fill" cx="50" cy="50" r="40" stroke-width="10" stroke="#7CB9E8"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center font-brand text-sm font-semibold">42g</div>
+                </div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted mt-1">Carbs</div>
+              </div>
+              <div class="flex flex-col items-center bg-card border border-line rounded-xl p-2" style="--circ: 251.2; --target: 155.7">
+                <div class="relative w-16 h-16">
+                  <svg class="ring w-full h-full" viewBox="0 0 100 100">
+                    <circle class="ring-track" cx="50" cy="50" r="40" stroke-width="10" fill="none"/>
+                    <circle class="ring-fill" cx="50" cy="50" r="40" stroke-width="10" stroke="#D4522A"/>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center font-brand text-sm font-semibold">22g</div>
+                </div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted mt-1">Fats</div>
+              </div>
+            </div>
+
+            <div class="mt-5">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-2">Ingredients</div>
+              <div class="flex gap-1.5 flex-wrap">
+                <span class="px-2 py-1 rounded-md bg-surface text-ink text-[10px] font-semibold border border-line">Chicken</span>
+                <span class="px-2 py-1 rounded-md bg-surface text-ink text-[10px] font-semibold border border-line">Quinoa</span>
+                <span class="px-2 py-1 rounded-md bg-surface text-ink text-[10px] font-semibold border border-line">Hummus</span>
+                <span class="px-2 py-1 rounded-md bg-surface text-ink text-[10px] font-semibold border border-line">Feta</span>
+                <span class="px-2 py-1 rounded-md bg-surface text-ink text-[10px] font-semibold border border-line">Cucumber</span>
+                <span class="px-2 py-1 rounded-md bg-surface text-ink text-[10px] font-semibold border border-line">Olive oil</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sticky CTA at bottom of scroll area -->
+          <div class="absolute bottom-0 left-0 right-0 bg-card/95 backdrop-blur border-t border-line px-4 py-3 flex items-center gap-3">
+            <div>
+              <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted">From</div>
+              <div class="font-brand text-xl font-semibold leading-none mt-0.5">$14</div>
+            </div>
+            <button class="flex-1 py-3 rounded-xl bg-primary text-white text-sm font-bold shadow-pop glow-cta">Visit Olive &amp; Stone</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 8 · MICRO-INTERACTIONS                                                -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">08 · Microcopy</div>
+        <h2>Tiny moments worth shipping</h2>
+      </div>
+      <p>Gradient label, glowing CTA, favorite heart with burst, toast that auto-dismisses.</p>
+    </div>
+
+    <div class="frame">
+      <div class="p-6 sm:p-8 lg:p-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="rounded-2xl border border-line bg-card p-5 flex flex-col gap-3">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Featured label</div>
+          <span class="self-start px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest text-white anim-grad-flow">Chef's pick</span>
+          <p class="text-xs text-ink-muted">Gradient slides every 9s. Good for meal of the week.</p>
+        </div>
+
+        <div class="rounded-2xl border border-line bg-card p-5 flex flex-col gap-3">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Glow CTA</div>
+          <button class="glow-cta self-start px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold sheen">Explore menu</button>
+          <p class="text-xs text-ink-muted">Pulsing halo draws the eye.</p>
+        </div>
+
+        <div class="rounded-2xl border border-line bg-card p-5 flex flex-col gap-3">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Favorite</div>
+          <button id="heartBtn" class="self-start w-12 h-12 rounded-full bg-surface border border-line flex items-center justify-center group hover:bg-card transition-colors" style="position: relative;">
+            <svg id="heartSvg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink-muted group-hover:text-accent transition-colors"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <p class="text-xs text-ink-muted">Tap to fill. Burst ring confirms.</p>
+        </div>
+
+        <div class="rounded-2xl border border-line bg-card p-5 flex flex-col gap-3">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Toast</div>
+          <button id="toastBtn" class="self-start px-4 py-2.5 rounded-xl bg-ink text-white text-sm font-bold">Show toast</button>
+          <p class="text-xs text-ink-muted">Slides up from bottom-right, auto-dismisses.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 9 · SUPERADMIN PANEL                                                  -->
+  <!-- ==================================================================== -->
+  <div class="section-pad" style="background: #EFEDE8;">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">09 · Superadmin</div>
+        <h2>Admin panel — animated pulse, meals, team</h2>
+      </div>
+      <p>All three production tabs. Tab indicator slides; stats count up; bars fill on reveal; vendor rows expand with smooth height.</p>
+    </div>
+
+    <div class="frame">
+      <!-- Header -->
+      <header class="bg-card border-b border-line px-6 py-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+            <svg width="18" height="18" viewBox="0 0 32 32"><line x1="16" y1="28" x2="16" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M16 21 C12 17, 6 18, 6 13 C10 11, 16 15, 16 21 Z" fill="#fff" opacity="0.75"/><path d="M16 16 C20 12, 27 13, 27 8 C23 6, 16 11, 16 16 Z" fill="#fff"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="font-brand text-xl font-semibold italic text-primary leading-none">bloo</div>
+            <div class="text-[10px] text-ink-muted uppercase tracking-widest font-semibold mt-1">Admin</div>
+          </div>
+        </div>
+        <div class="hidden sm:flex items-center gap-2">
+          <span class="text-xs text-ink-muted">alex@bloo.app</span>
+          <button class="px-3 py-1.5 rounded-lg border border-line bg-card text-xs font-semibold text-ink hover:bg-surface transition-colors inline-flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign out
+          </button>
+        </div>
+      </header>
+
+      <!-- Tab bar with sliding indicator -->
+      <div class="bg-card border-b border-line px-6 relative">
+        <div class="flex" id="adminTabRow" style="position: relative;">
+          <button class="admin-tab px-5 py-3 text-sm font-semibold inline-flex items-center gap-1.5 text-ink-muted" data-admin-tab="pulse">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            Pulse
+          </button>
+          <button class="admin-tab px-5 py-3 text-sm font-semibold inline-flex items-center gap-1.5 text-primary active" data-admin-tab="meals">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18M6 11V6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v5M5 11l1 10h12l1-10"/></svg>
+            Meals
+          </button>
+          <button class="admin-tab px-5 py-3 text-sm font-semibold inline-flex items-center gap-1.5 text-ink-muted" data-admin-tab="team">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Team
+          </button>
+          <div id="adminTabIndicator" class="absolute bottom-0 h-0.5 bg-primary transition-all duration-300 ease-out"></div>
+        </div>
+      </div>
+
+      <!-- ══ PULSE PANEL ══════════════════════════════════════════════════ -->
+      <div class="admin-panel p-6 sm:p-8 space-y-8" data-panel="pulse" hidden>
+        <h3 class="font-brand text-2xl font-semibold">Pulse</h3>
+
+        <!-- Stat cards with count-up -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 reveal stagger">
+          <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Total meals</div>
+            <div class="font-brand text-3xl font-semibold mt-2 count-up" data-count="47">0</div>
+          </div>
+          <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Active vendors</div>
+            <div class="font-brand text-3xl font-semibold mt-2 count-up" data-count="12">0</div>
+          </div>
+          <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Meal of the week</div>
+            <div class="font-brand text-lg font-semibold mt-2 truncate text-accent">Mediterranean bowl</div>
+          </div>
+          <div class="bg-card border border-line rounded-2xl p-5">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Vendors (all)</div>
+            <div class="font-brand text-3xl font-semibold mt-2 count-up" data-count="15">0</div>
+          </div>
+        </div>
+
+        <!-- Meals by vendor bar chart -->
+        <div class="bg-card border border-line rounded-2xl overflow-hidden reveal">
+          <div class="px-5 py-4 border-b border-line">
+            <h4 class="font-brand text-base font-semibold">Meals by vendor</h4>
+          </div>
+          <div class="divide-y divide-line">
+            <div class="flex items-center gap-4 px-5 py-3">
+              <span class="text-sm font-semibold text-ink w-32 truncate">Olive &amp; Stone</span>
+              <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out pulse-bar" style="--w: 72%"></div></div>
+              <span class="text-xs font-semibold text-ink-muted w-14 text-right">12 meals</span>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3">
+              <span class="text-sm font-semibold text-ink w-32 truncate">Birch Table</span>
+              <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out pulse-bar" style="--w: 52%; transition-delay: 80ms"></div></div>
+              <span class="text-xs font-semibold text-ink-muted w-14 text-right">8 meals</span>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3">
+              <span class="text-sm font-semibold text-ink w-32 truncate">Rook Kitchen</span>
+              <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out pulse-bar" style="--w: 38%; transition-delay: 160ms"></div></div>
+              <span class="text-xs font-semibold text-ink-muted w-14 text-right">6 meals</span>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3">
+              <span class="text-sm font-semibold text-ink w-32 truncate">Mesa &amp; Grain</span>
+              <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out pulse-bar" style="--w: 28%; transition-delay: 240ms"></div></div>
+              <span class="text-xs font-semibold text-ink-muted w-14 text-right">4 meals</span>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3">
+              <span class="text-sm font-semibold text-ink w-32 truncate">Noble Ash</span>
+              <div class="flex-1 h-2 bg-surface rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out pulse-bar" style="--w: 18%; transition-delay: 320ms"></div></div>
+              <span class="text-xs font-semibold text-ink-muted w-14 text-right">3 meals</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recently added -->
+        <div class="bg-card border border-line rounded-2xl overflow-hidden reveal">
+          <div class="px-5 py-4 border-b border-line">
+            <h4 class="font-brand text-base font-semibold">Recently added</h4>
+          </div>
+          <div class="divide-y divide-line reveal stagger in">
+            <div class="flex items-center gap-3 px-5 py-3"><img class="w-10 h-10 rounded-lg object-cover border border-line" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=160&q=80" alt=""/><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-ink truncate">Mediterranean bowl</div><div class="text-xs text-ink-muted">Olive &amp; Stone</div></div><span class="text-xs text-ink-faint">540 cal</span></div>
+            <div class="flex items-center gap-3 px-5 py-3"><img class="w-10 h-10 rounded-lg object-cover border border-line" src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=160&q=80" alt=""/><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-ink truncate">Salmon rice bowl</div><div class="text-xs text-ink-muted">Birch Table</div></div><span class="text-xs text-ink-faint">620 cal</span></div>
+            <div class="flex items-center gap-3 px-5 py-3"><img class="w-10 h-10 rounded-lg object-cover border border-line" src="https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=160&q=80" alt=""/><div class="flex-1 min-w-0"><div class="text-sm font-semibold text-ink truncate">Avocado toast plate</div><div class="text-xs text-ink-muted">Rook Kitchen</div></div><span class="text-xs text-ink-faint">480 cal</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ MEALS PANEL ══════════════════════════════════════════════════ -->
+      <div class="admin-panel p-6 sm:p-8 space-y-6" data-panel="meals">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="font-brand text-2xl font-semibold">Meals</h3>
+          <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-primary-hover transition-colors sheen shadow-pop">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add meal
+          </button>
+        </div>
+
+        <!-- Vendor filter pills -->
+        <div class="flex gap-2 overflow-x-auto pb-1 pill-row">
+          <button class="shrink-0 px-4 py-2 rounded-xl text-sm font-bold bg-primary text-white shadow-pop">All</button>
+          <button class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-card border border-line text-ink-muted hover:text-ink transition-colors">Olive &amp; Stone</button>
+          <button class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-card border border-line text-ink-muted hover:text-ink transition-colors">Birch Table</button>
+          <button class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-card border border-line text-ink-muted hover:text-ink transition-colors">Rook Kitchen</button>
+          <button class="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-card border border-line text-ink-muted hover:text-ink transition-colors">Mesa &amp; Grain</button>
+        </div>
+
+        <!-- Meals table -->
+        <div class="bg-card border border-line rounded-2xl overflow-hidden reveal">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-surface border-b border-line">
+                <tr>
+                  <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-ink-muted">Meal</th>
+                  <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-ink-muted">Vendor</th>
+                  <th class="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-ink-muted whitespace-nowrap">Macros</th>
+                  <th class="px-5 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-ink-muted">MOTW</th>
+                  <th class="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-ink-muted">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line" id="adminMealsTbody">
+                <!-- rows filled by JS for stagger-in -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TEAM PANEL ═══════════════════════════════════════════════════ -->
+      <div class="admin-panel p-6 sm:p-8 space-y-10" data-panel="team" hidden>
+
+        <section>
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-brand text-2xl font-semibold">Super admins</h3>
+              <p class="text-ink-muted text-xs mt-1">Full platform access.</p>
+            </div>
+            <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-primary-hover transition-colors shadow-pop">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add admin
+            </button>
+          </div>
+          <div class="bg-card border border-line rounded-2xl overflow-hidden reveal stagger">
+            <div class="flex items-center gap-3 px-5 py-3.5 border-b border-line hover:bg-surface/60 transition-colors cursor-pointer">
+              <div class="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-sm">A</div>
+              <span class="text-sm font-semibold flex-1">Alex Chen</span>
+              <span class="text-xs text-ink-muted font-mono">user_2abc…</span>
+            </div>
+            <div class="flex items-center gap-3 px-5 py-3.5 hover:bg-surface/60 transition-colors cursor-pointer">
+              <div class="w-8 h-8 rounded-full bg-accent/15 text-accent flex items-center justify-center font-bold text-sm">M</div>
+              <span class="text-sm font-semibold flex-1">Maya Patel</span>
+              <span class="text-xs text-ink-muted font-mono">user_2xyz…</span>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="font-brand text-2xl font-semibold">Vendors</h3>
+              <p class="text-ink-muted text-xs mt-1">Manage restaurants and their team members.</p>
+            </div>
+            <button class="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-primary-hover transition-colors shadow-pop">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add vendor
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <!-- Expandable vendor row: Olive & Stone (open) -->
+            <div class="bg-card border border-line rounded-2xl overflow-hidden vendor-row is-open">
+              <button class="vendor-toggle w-full flex items-center gap-3 px-5 py-4 hover:bg-surface/40 transition-colors">
+                <span class="w-2 h-2 rounded-full bg-macro-green"></span>
+                <span class="text-sm font-semibold">Olive &amp; Stone</span>
+                <span class="text-xs text-ink-faint font-mono">/olive-stone</span>
+                <div class="ml-auto flex items-center gap-3">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface text-ink-muted">12 meals</span>
+                  <svg class="vendor-chev text-ink-muted transition-transform duration-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </button>
+              <div class="vendor-body border-t border-line p-5 space-y-4" style="background: #F7F5F0;">
+                <div class="flex flex-wrap gap-2">
+                  <button class="px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary-active rounded-lg hover:bg-primary/20 transition-colors">Edit details</button>
+                  <button class="px-3 py-1.5 text-xs font-bold bg-accent/10 text-accent rounded-lg hover:bg-accent/20 transition-colors">Deactivate</button>
+                  <button class="px-3 py-1.5 text-xs font-bold bg-surface border border-line text-ink hover:bg-card transition-colors rounded-lg">Open vendor panel →</button>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Members</div>
+                    <button class="text-xs text-primary font-bold hover:underline inline-flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add member</button>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="flex items-center gap-3 bg-card border border-line rounded-xl p-2.5">
+                      <div class="w-7 h-7 rounded-full bg-surface border border-line text-ink-muted flex items-center justify-center text-xs font-bold">S</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold truncate">Sofia Reyes</div>
+                        <div class="text-[11px] text-ink-muted truncate">sofia@olivestone.com</div>
+                      </div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-macro-green/10 text-macro-green">● linked</span>
+                    </div>
+                    <div class="flex items-center gap-3 bg-card border border-line rounded-xl p-2.5">
+                      <div class="w-7 h-7 rounded-full bg-surface border border-line text-ink-muted flex items-center justify-center text-xs font-bold">D</div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold truncate">Dimitri Lang</div>
+                        <div class="text-[11px] text-ink-muted truncate">dimitri@olivestone.com</div>
+                      </div>
+                      <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface text-ink-faint border border-line">○ pending</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Collapsed rows -->
+            <div class="bg-card border border-line rounded-2xl overflow-hidden vendor-row">
+              <button class="vendor-toggle w-full flex items-center gap-3 px-5 py-4 hover:bg-surface/40 transition-colors">
+                <span class="w-2 h-2 rounded-full bg-macro-green"></span>
+                <span class="text-sm font-semibold">Birch Table</span>
+                <span class="text-xs text-ink-faint font-mono">/birch-table</span>
+                <div class="ml-auto flex items-center gap-3">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface text-ink-muted">8 meals</span>
+                  <svg class="vendor-chev text-ink-muted transition-transform duration-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </button>
+              <div class="vendor-body border-t border-line p-5" style="background: #F7F5F0;">
+                <div class="text-xs text-ink-muted">Click header to expand.</div>
+              </div>
+            </div>
+
+            <div class="bg-card border border-line rounded-2xl overflow-hidden vendor-row">
+              <button class="vendor-toggle w-full flex items-center gap-3 px-5 py-4 hover:bg-surface/40 transition-colors">
+                <span class="w-2 h-2 rounded-full bg-ink-faint"></span>
+                <span class="text-sm font-semibold">Rook Kitchen</span>
+                <span class="text-xs text-ink-faint font-mono">/rook-kitchen</span>
+                <div class="ml-auto flex items-center gap-3">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface text-ink-muted">6 meals</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">inactive</span>
+                  <svg class="vendor-chev text-ink-muted transition-transform duration-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </button>
+              <div class="vendor-body border-t border-line p-5" style="background: #F7F5F0;">
+                <div class="text-xs text-ink-muted">Click header to expand.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 10 · VENDOR PANEL                                                     -->
+  <!-- ==================================================================== -->
+  <div class="section-pad">
+    <div class="screen-label reveal">
+      <div>
+        <div class="kicker">10 · Vendor panel</div>
+        <h2>Scoped vendor view — their meals, their team</h2>
+      </div>
+      <p>Same CRUD + AI macro estimator, but scoped to one vendor. Drag-drop image upload with animated border; macro modal streams a result with a typewriter caret.</p>
+    </div>
+
+    <div class="frame">
+      <!-- Header -->
+      <header class="bg-card border-b border-line px-6 py-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <button class="w-9 h-9 rounded-xl border border-line bg-card hover:bg-surface transition-colors flex items-center justify-center shrink-0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="w-9 h-9 rounded-xl bg-macro-green/15 text-macro-green flex items-center justify-center font-bold text-sm shrink-0">OS</div>
+          <div class="min-w-0">
+            <div class="font-brand text-lg font-semibold truncate leading-none">Olive &amp; Stone</div>
+            <div class="text-[10px] text-ink-muted uppercase tracking-widest font-semibold mt-1">Vendor panel</div>
+          </div>
+        </div>
+        <div class="hidden sm:flex items-center gap-2">
+          <button class="px-3 py-1.5 rounded-lg border border-line bg-card text-xs font-semibold text-ink hover:bg-surface transition-colors inline-flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+            Profile
+          </button>
+        </div>
+      </header>
+
+      <div class="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left: stats + vendor card -->
+        <div class="lg:col-span-4 space-y-4">
+          <div class="bg-card border border-line rounded-2xl p-5 reveal">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-macro-green/15 text-macro-green flex items-center justify-center font-bold">OS</div>
+              <div class="min-w-0">
+                <div class="font-brand text-lg font-semibold truncate">Olive &amp; Stone</div>
+                <div class="text-xs text-ink-muted truncate">Mediterranean · 0.6 mi</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+              <div class="rounded-xl bg-surface p-2.5">
+                <div class="font-brand text-xl font-semibold count-up" data-count="12">0</div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted mt-0.5">Meals</div>
+              </div>
+              <div class="rounded-xl bg-surface p-2.5">
+                <div class="font-brand text-xl font-semibold text-macro-green">●</div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted mt-0.5">Active</div>
+              </div>
+              <div class="rounded-xl bg-surface p-2.5">
+                <div class="font-brand text-xl font-semibold count-up" data-count="2">0</div>
+                <div class="text-[9px] font-bold uppercase tracking-widest text-ink-muted mt-0.5">Team</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drag-drop image upload -->
+          <div class="bg-card border border-line rounded-2xl p-5 reveal">
+            <div class="text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-3">Meal image</div>
+            <label class="drop-zone group cursor-pointer flex flex-col items-center justify-center gap-2 aspect-[4/3] rounded-xl border-2 border-dashed border-line bg-surface/50 hover:border-primary hover:bg-primary/5 transition-colors">
+              <svg class="text-ink-faint group-hover:text-primary transition-colors" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div class="text-sm font-semibold text-ink">Drop an image</div>
+              <div class="text-[11px] text-ink-muted">or click to browse · PNG/JPG, max 5MB</div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Right: form with AI macro estimator -->
+        <div class="lg:col-span-8 space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="font-brand text-2xl font-semibold">New meal</h3>
+            <span class="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Draft</span>
+          </div>
+
+          <div class="bg-card border border-line rounded-2xl p-5 reveal">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Meal name</label>
+                <input class="w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" placeholder="Mediterranean bowl" value="Mediterranean bowl"/>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Description <span class="normal-case text-ink-faint">(optional)</span></label>
+                <textarea rows="2" class="w-full resize-none rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors" placeholder="What makes this meal special…">Grilled chicken, quinoa, roasted peppers, hummus, cucumber, feta.</textarea>
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Ingredients <span class="normal-case text-ink-faint">(comma-separated)</span></label>
+                <textarea rows="2" class="w-full resize-none rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors">Chicken, quinoa, hummus, cucumber, feta, olive oil</textarea>
+                <button id="openMacroModalBtn" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary-active border border-primary rounded-lg hover:bg-primary/10 transition-colors">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.68 4.6L18.5 8.2l-3.85 2.8.88 4.72L12 13.6l-3.53 2.12.88-4.72L5.5 8.2l4.82-1.6z"/></svg>
+                  Estimate with AI
+                </button>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Nutrition</label>
+                <div class="grid grid-cols-4 gap-2">
+                  <div><label class="block text-[9px] text-ink-faint font-bold uppercase tracking-widest mb-1">Cal</label><input class="w-full rounded-xl border border-line bg-card px-2.5 py-2 text-sm text-ink" value="540"/></div>
+                  <div><label class="block text-[9px] text-ink-faint font-bold uppercase tracking-widest mb-1">P (g)</label><input class="w-full rounded-xl border border-line bg-card px-2.5 py-2 text-sm text-macro-green font-bold" value="38"/></div>
+                  <div><label class="block text-[9px] text-ink-faint font-bold uppercase tracking-widest mb-1">C (g)</label><input class="w-full rounded-xl border border-line bg-card px-2.5 py-2 text-sm text-primary-active font-bold" value="42"/></div>
+                  <div><label class="block text-[9px] text-ink-faint font-bold uppercase tracking-widest mb-1">F (g)</label><input class="w-full rounded-xl border border-line bg-card px-2.5 py-2 text-sm text-accent font-bold" value="22"/></div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Price (USD)</label>
+                <input class="w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink" placeholder="14.00" value="14.00"/>
+                <p class="text-[10px] text-ink-faint mt-1">Displayed for reference — bloo is catalog-only.</p>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-ink-muted mb-1.5">Dietary tags <span class="normal-case text-ink-faint">(optional)</span></label>
+                <input class="w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink" value="high-protein, gluten-free"/>
+              </div>
+              <label class="sm:col-span-2 inline-flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-ink mt-1">
+                <input type="checkbox" checked class="w-4 h-4 accent-primary rounded"/>
+                Feature as Meal of the Week
+              </label>
+            </div>
+
+            <div class="flex items-center gap-3 mt-5 pt-5 border-t border-line">
+              <button class="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-pop sheen hover:bg-primary-hover transition-colors">Publish meal</button>
+              <button class="px-5 py-2.5 rounded-xl bg-card border border-line text-sm font-semibold text-ink hover:bg-surface transition-colors">Save draft</button>
+              <span class="ml-auto inline-flex items-center gap-1.5 text-[11px] font-bold text-ink-muted">
+                <span class="live-dot"></span>Auto-saved 2s ago
+              </span>
+            </div>
+          </div>
+
+          <!-- Existing meals list -->
+          <div class="bg-card border border-line rounded-2xl overflow-hidden reveal">
+            <div class="px-5 py-4 border-b border-line flex items-center justify-between gap-3">
+              <h4 class="font-brand text-base font-semibold">Your meals</h4>
+              <span class="text-xs text-ink-muted font-semibold">12 total</span>
+            </div>
+            <div class="divide-y divide-line reveal stagger in">
+              <div class="flex items-center gap-3 px-5 py-3 hover:bg-surface/50 transition-colors">
+                <img class="w-12 h-12 rounded-xl object-cover border border-line" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=160&q=80" alt=""/>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-bold truncate">Mediterranean bowl</div>
+                  <div class="text-[11px] text-ink-muted font-mono">540 cal · 38P · 42C · 22F</div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">★ MOTW</span>
+                <button class="px-2.5 py-1 text-[11px] font-bold bg-primary/10 text-primary-active rounded-lg hover:bg-primary/20 transition-colors">Edit</button>
+                <button class="p-1.5 text-accent hover:bg-accent/10 rounded-lg transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+              </div>
+              <div class="flex items-center gap-3 px-5 py-3 hover:bg-surface/50 transition-colors">
+                <img class="w-12 h-12 rounded-xl object-cover border border-line" src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=160&q=80" alt=""/>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-bold truncate">Neapolitan margherita</div>
+                  <div class="text-[11px] text-ink-muted font-mono">720 cal · 52P · 48C · 34F</div>
+                </div>
+                <button class="px-2.5 py-1 text-[11px] font-bold bg-primary/10 text-primary-active rounded-lg hover:bg-primary/20 transition-colors">Edit</button>
+                <button class="p-1.5 text-accent hover:bg-accent/10 rounded-lg transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+              </div>
+              <div class="flex items-center gap-3 px-5 py-3 hover:bg-surface/50 transition-colors">
+                <img class="w-12 h-12 rounded-xl object-cover border border-line" src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=160&q=80" alt=""/>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-bold truncate">Chicken shawarma plate</div>
+                  <div class="text-[11px] text-ink-muted font-mono">610 cal · 45P · 38C · 26F</div>
+                </div>
+                <button class="px-2.5 py-1 text-[11px] font-bold bg-primary/10 text-primary-active rounded-lg hover:bg-primary/20 transition-colors">Edit</button>
+                <button class="p-1.5 text-accent hover:bg-accent/10 rounded-lg transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Macro Modal (opened from vendor panel) -->
+  <div id="macroModal" class="fixed inset-0 z-[90] bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4" hidden>
+    <div class="bg-card rounded-2xl border border-line w-full max-w-md shadow-lift" style="animation: liftIn .4s cubic-bezier(.2,.7,.2,1);">
+      <div class="p-5 border-b border-line flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg class="text-primary anim-spin-slow" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.68 4.6L18.5 8.2l-3.85 2.8.88 4.72L12 13.6l-3.53 2.12.88-4.72L5.5 8.2l4.82-1.6z"/></svg>
+          <h4 class="font-brand text-lg font-semibold">Estimate macros</h4>
+        </div>
+        <button id="closeMacroModalBtn" class="w-8 h-8 rounded-lg hover:bg-surface transition-colors flex items-center justify-center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <p class="text-sm text-ink-muted">Describe the meal ingredients and we'll estimate the nutrition. Powered by Claude.</p>
+        <div class="scan-wrap bg-card border border-line rounded-xl p-3 text-sm leading-relaxed">
+          2 cups chicken breast<br/>
+          1 cup brown rice<br/>
+          steamed broccoli<span class="caret"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="glow-cta px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2">
+            <svg class="anim-spin-slow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Estimate
+          </button>
+          <button id="closeMacroModalBtn2" class="px-4 py-2.5 rounded-xl bg-card border border-line text-sm font-semibold text-ink hover:bg-surface transition-colors">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastHost" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+  <div class="text-center text-xs text-ink-muted py-10 px-4">
+    bloo · animated inspo · Fraunces + Epilogue · primary <code>#7CB9E8</code> · accent <code>#D4522A</code> · respects prefers-reduced-motion
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- SCRIPTS                                                               -->
+  <!-- ==================================================================== -->
+  <script>
+    // Reveal on scroll
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    // Pill indicator
+    (function(){
+      const row = document.getElementById('pillRow');
+      const ind = document.getElementById('pillIndicator');
+      if (!row || !ind) return;
+      const pills = row.querySelectorAll('[data-pill]');
+      function move(el) {
+        const rect = el.getBoundingClientRect();
+        const parentRect = row.getBoundingClientRect();
+        ind.style.width = rect.width + 'px';
+        ind.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+        pills.forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+      }
+      pills.forEach(p => p.addEventListener('click', () => move(p)));
+      window.addEventListener('load', () => move(row.querySelector('.active') || pills[0]));
+      window.addEventListener('resize', () => { const a = row.querySelector('.active'); if (a) move(a); });
+    })();
+
+    // Skeleton → content demo
+    (function(){
+      const grid = document.getElementById('skelGrid');
+      const btn  = document.getElementById('reloadBtn');
+      if (!grid) return;
+      const meals = [
+        { name: 'Grain bowl',   vendor: 'Mesa & Grain',  img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=700&q=80', p: 36, c: 54, f: 18, k: 560 },
+        { name: 'Herb chicken', vendor: 'Olive & Stone', img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&q=80', p: 48, c: 32, f: 22, k: 520 },
+        { name: 'Shrimp tacos', vendor: 'Birch Table',   img: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=700&q=80', p: 32, c: 44, f: 20, k: 480 },
+      ];
+      const skel = () => `
+        <div class="rounded-2xl border border-line bg-card overflow-hidden">
+          <div class="skel w-full" style="aspect-ratio: 4/3; border-radius: 0;"></div>
+          <div class="p-4 space-y-2">
+            <div class="skel h-3.5 w-3/4"></div>
+            <div class="skel h-2.5 w-1/2"></div>
+            <div class="flex gap-1.5 pt-1">
+              <div class="skel h-5 w-12 rounded-md"></div>
+              <div class="skel h-5 w-12 rounded-md"></div>
+              <div class="skel h-5 w-12 rounded-md"></div>
+            </div>
+          </div>
+        </div>`;
+      const real = (m, i) => `
+        <div class="meal-card cursor-pointer bg-card rounded-2xl overflow-hidden border border-line" style="animation: liftIn .55s cubic-bezier(.2,.7,.2,1) ${i*0.08}s both;">
+          <div class="relative overflow-hidden" style="aspect-ratio: 4/3">
+            <img class="img w-full h-full object-cover" src="${m.img}" alt="" />
+            <div class="macro-strip">
+              <div class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Macros</div>
+              <div class="flex flex-wrap gap-x-2 text-xs font-bold">
+                <span>${m.k} kcal</span><span class="opacity-60">·</span><span>${m.p}g P</span><span class="opacity-60">·</span><span>${m.c}g C</span><span class="opacity-60">·</span><span>${m.f}g F</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4">
+            <div class="font-brand text-[15px] font-semibold leading-tight">${m.name}</div>
+            <div class="text-xs text-ink-muted mt-0.5">${m.vendor}</div>
+            <div class="flex flex-wrap items-center gap-1.5 mt-3">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-macro-green/10 text-macro-green">${m.p}g P</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary-active">${m.c}g C</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-accent/10 text-accent">${m.f}g F</span>
+            </div>
+          </div>
+        </div>`;
+      function play() {
+        grid.innerHTML = Array.from({length: 3}).map(skel).join('');
+        setTimeout(() => { grid.innerHTML = meals.map(real).join(''); }, 1400);
+      }
+      play();
+      btn.addEventListener('click', play);
+    })();
+
+    // Heart burst
+    (function(){
+      const btn = document.getElementById('heartBtn');
+      const svg = document.getElementById('heartSvg');
+      if (!btn) return;
+      let filled = false;
+      btn.addEventListener('click', () => {
+        filled = !filled;
+        if (filled) {
+          svg.classList.add('heart-filled');
+          const ring = document.createElement('span');
+          ring.className = 'heart-burst';
+          btn.appendChild(ring);
+          setTimeout(() => ring.remove(), 650);
+        } else {
+          svg.classList.remove('heart-filled');
+        }
+      });
+    })();
+
+    // Admin tab switching with sliding indicator
+    (function(){
+      const row = document.getElementById('adminTabRow');
+      const ind = document.getElementById('adminTabIndicator');
+      if (!row || !ind) return;
+      const tabs = row.querySelectorAll('.admin-tab');
+      const panels = document.querySelectorAll('.admin-panel');
+      function activate(tab) {
+        tabs.forEach(t => {
+          t.classList.remove('active', 'text-primary');
+          t.classList.add('text-ink-muted');
+        });
+        tab.classList.remove('text-ink-muted');
+        tab.classList.add('active', 'text-primary');
+        const rect = tab.getBoundingClientRect();
+        const pr = row.getBoundingClientRect();
+        ind.style.width = rect.width + 'px';
+        ind.style.transform = `translateX(${rect.left - pr.left}px)`;
+        const key = tab.dataset.adminTab;
+        panels.forEach(p => { p.hidden = p.dataset.panel !== key; });
+      }
+      tabs.forEach(t => t.addEventListener('click', () => activate(t)));
+      window.addEventListener('load', () => activate(row.querySelector('.active') || tabs[0]));
+      window.addEventListener('resize', () => { const a = row.querySelector('.active'); if (a) activate(a); });
+    })();
+
+    // Count-up on reveal
+    (function(){
+      const nodes = document.querySelectorAll('.count-up[data-count]');
+      if (!nodes.length) return;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (!e.isIntersecting) return;
+          const el = e.target;
+          const target = parseInt(el.dataset.count, 10) || 0;
+          if (reduce) { el.textContent = target; obs.unobserve(el); return; }
+          const dur = 900;
+          const start = performance.now();
+          (function tick(now) {
+            const p = Math.min(1, (now - start) / dur);
+            const eased = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(target * eased);
+            if (p < 1) requestAnimationFrame(tick);
+          })(start);
+          obs.unobserve(el);
+        });
+      }, { threshold: 0.4 });
+      nodes.forEach(n => obs.observe(n));
+    })();
+
+    // Vendor row expand/collapse
+    (function(){
+      document.querySelectorAll('.vendor-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('.vendor-row');
+          if (row) row.classList.toggle('is-open');
+        });
+      });
+    })();
+
+    // Populate admin meals tbody with stagger
+    (function(){
+      const tbody = document.getElementById('adminMealsTbody');
+      if (!tbody) return;
+      const meals = [
+        { name: 'Mediterranean bowl',   vendor: 'Olive & Stone',  img: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=120&q=80', k: 540, p: 38, c: 42, f: 22, motw: true  },
+        { name: 'Neapolitan margherita',vendor: 'Olive & Stone',  img: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=120&q=80', k: 720, p: 52, c: 48, f: 34, motw: false },
+        { name: 'Salmon rice bowl',     vendor: 'Birch Table',    img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=120&q=80', k: 620, p: 45, c: 58, f: 18, motw: false },
+        { name: 'Avocado toast plate',  vendor: 'Rook Kitchen',   img: 'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=120&q=80', k: 480, p: 18, c: 52, f: 24, motw: false },
+        { name: 'Grain bowl',           vendor: 'Mesa & Grain',   img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=120&q=80',  k: 560, p: 36, c: 54, f: 18, motw: false },
+      ];
+      tbody.innerHTML = meals.map(m => `
+        <tr class="meal-row hover:bg-surface/40 transition-colors">
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <img class="w-10 h-10 rounded-lg object-cover border border-line" src="${m.img}" alt=""/>
+              <div class="text-sm font-semibold truncate">${m.name}</div>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-sm text-ink-muted">${m.vendor}</td>
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-1.5 text-[10px] font-bold font-mono whitespace-nowrap">
+              <span class="text-ink-muted">${m.k}c</span>
+              <span class="px-1.5 py-0.5 rounded bg-macro-green/10 text-macro-green">${m.p}P</span>
+              <span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary-active">${m.c}C</span>
+              <span class="px-1.5 py-0.5 rounded bg-accent/10 text-accent">${m.f}F</span>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-center">${m.motw
+            ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">★</span>`
+            : `<span class="text-ink-faint">—</span>`}</td>
+          <td class="px-5 py-3">
+            <div class="flex items-center justify-end gap-1.5">
+              <button class="px-2.5 py-1 text-[11px] font-bold bg-primary/10 text-primary-active rounded-lg hover:bg-primary/20 transition-colors">Edit</button>
+              <button class="p-1.5 text-accent hover:bg-accent/10 rounded-lg transition-colors"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      const rows = tbody.querySelectorAll('.meal-row');
+      const obs = new IntersectionObserver((entries) => {
+        if (!entries.some(e => e.isIntersecting)) return;
+        rows.forEach((r, i) => setTimeout(() => r.classList.add('in'), i * 70));
+        obs.disconnect();
+      }, { threshold: 0.1 });
+      obs.observe(tbody);
+    })();
+
+    // Macro modal open/close
+    (function(){
+      const modal = document.getElementById('macroModal');
+      const openBtn = document.getElementById('openMacroModalBtn');
+      const closeBtn = document.getElementById('closeMacroModalBtn');
+      const closeBtn2 = document.getElementById('closeMacroModalBtn2');
+      if (!modal || !openBtn) return;
+      const open = () => { modal.hidden = false; };
+      const close = () => { modal.hidden = true; };
+      openBtn.addEventListener('click', open);
+      closeBtn && closeBtn.addEventListener('click', close);
+      closeBtn2 && closeBtn2.addEventListener('click', close);
+      modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) close(); });
+    })();
+
+    // Toast
+    (function(){
+      const btn  = document.getElementById('toastBtn');
+      const host = document.getElementById('toastHost');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const t = document.createElement('div');
+        t.className = 'toast pointer-events-auto bg-ink text-white px-4 py-3 rounded-xl shadow-lift flex items-center gap-3 min-w-[240px] max-w-[90vw]';
+        t.innerHTML = `
+          <div class="w-8 h-8 rounded-full bg-macro-green/20 text-macro-green flex items-center justify-center shrink-0">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-bold truncate">Saved to favorites</div>
+            <div class="text-[11px] opacity-70 truncate">Mediterranean bowl · Olive &amp; Stone</div>
+          </div>`;
+        host.appendChild(t);
+        setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 320); }, 2400);
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,12 +1,80 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useClerk, useUser, useSession } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { useMeals } from '../hooks/useMeals';
+import { useReveal } from '../hooks/useReveal';
+import { useCountUp } from '../hooks/useCountUp';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
-import { Trash2, Plus, LogOut, ChevronDown, UtensilsCrossed, BarChart2, Users } from 'lucide-react';
+import { Trash2, Plus, LogOut, ChevronDown, UtensilsCrossed, BarChart2, Users, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+function CountUpStat({ target, label }: { target: number; label: string }) {
+  const { ref, value } = useCountUp(target);
+  return (
+    <div className="bg-card rounded-2xl border border-line p-5">
+      <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">{label}</div>
+      <div ref={ref as React.RefObject<HTMLDivElement>} className="font-display text-3xl font-semibold text-ink truncate">{value}</div>
+    </div>
+  );
+}
+
+function MealsByVendor({ card, activeVendors, meals }: { card: string; activeVendors: { id: string; name: string }[]; meals: Meal[] }) {
+  const ref = useReveal<HTMLDivElement>();
+  return (
+    <div ref={ref} className={`${card} reveal`}>
+      <div className="px-6 py-4 border-b border-line">
+        <h3 className="font-display text-lg font-semibold text-ink">Meals by vendor</h3>
+      </div>
+      {activeVendors.length === 0 ? (
+        <div className="p-10 text-center text-ink-muted text-sm">No vendors yet.</div>
+      ) : (
+        <div className="divide-y divide-line">
+          {activeVendors.map((v, i) => {
+            const count = meals.filter(m => m.vendor_id === v.id).length;
+            const pct = meals.length ? Math.round((count / meals.length) * 100) : 0;
+            return (
+              <div key={v.id} className="flex items-center gap-4 px-6 py-4">
+                <span className="text-sm font-medium text-ink w-40 truncate">{v.name}</span>
+                <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full pulse-bar"
+                    style={{ ['--w' as any]: `${pct}%`, transitionDelay: `${i * 80}ms` }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-ink w-16 text-right">{count} meals</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecentlyAdded({ card, meals }: { card: string; meals: Meal[] }) {
+  const ref = useReveal<HTMLDivElement>();
+  return (
+    <div ref={ref} className={`${card} reveal`}>
+      <div className="px-6 py-4 border-b border-line">
+        <h3 className="font-display text-lg font-semibold text-ink">Recently added</h3>
+      </div>
+      <div className="divide-y divide-line reveal stagger in">
+        {meals.map(meal => (
+          <div key={meal.id} className="flex items-center gap-4 px-6 py-3">
+            <img src={meal.image_url} alt={meal.name} className="w-10 h-10 rounded-lg object-cover border border-line" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-ink truncate">{meal.name}</p>
+              <p className="text-xs text-ink-muted">{meal.vendor}</p>
+            </div>
+            <span className="text-xs text-ink-faint">{meal.calories} cal</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface Vendor {
   id: string;
@@ -47,6 +115,23 @@ export default function AdminPanel() {
   const { meals, refetch } = useMeals();
 
   const [activeTab, setActiveTab] = useState<Tab>('meals');
+  const tabRowRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Record<Tab, HTMLButtonElement | null>>({ pulse: null, meals: null, team: null });
+  const [indicator, setIndicator] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const update = () => {
+      const row = tabRowRef.current;
+      const tab = tabRefs.current[activeTab];
+      if (!row || !tab) return;
+      const r = tab.getBoundingClientRect();
+      const p = row.getBoundingClientRect();
+      setIndicator({ left: r.left - p.left, width: r.width });
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [activeTab]);
 
   // ── Meals ────────────────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -323,24 +408,29 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-6 flex gap-0 border-t border-line">
-          {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-3 text-sm font-semibold capitalize transition-colors border-b-2 -mb-px ${
-                activeTab === tab
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-ink-muted hover:text-ink'
-              }`}
-            >
-              {tab === 'pulse' && <BarChart2 size={14} className="inline mr-1.5 -mt-0.5" />}
-              {tab === 'team' && <Users size={14} className="inline mr-1.5 -mt-0.5" />}
-              {tab === 'meals' && <UtensilsCrossed size={14} className="inline mr-1.5 -mt-0.5" />}
-              {tab}
-            </button>
-          ))}
+        {/* Tabs with sliding indicator */}
+        <div className="max-w-7xl mx-auto px-6 border-t border-line">
+          <div ref={tabRowRef} className="relative flex gap-0">
+            {TABS.map(tab => (
+              <button
+                key={tab}
+                ref={el => { tabRefs.current[tab] = el; }}
+                onClick={() => setActiveTab(tab)}
+                className={`px-5 py-3 text-sm font-semibold capitalize transition-colors ${
+                  activeTab === tab ? 'text-primary' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                {tab === 'pulse' && <BarChart2 size={14} className="inline mr-1.5 -mt-0.5" />}
+                {tab === 'team' && <Users size={14} className="inline mr-1.5 -mt-0.5" />}
+                {tab === 'meals' && <UtensilsCrossed size={14} className="inline mr-1.5 -mt-0.5" />}
+                {tab}
+              </button>
+            ))}
+            <div
+              className="absolute bottom-0 h-0.5 bg-primary rounded-full transition-all duration-300 ease-out"
+              style={{ left: indicator.left, width: indicator.width }}
+            />
+          </div>
         </div>
       </header>
 
@@ -348,77 +438,39 @@ export default function AdminPanel() {
 
         {/* ══ PULSE TAB ══════════════════════════════════════════════════════ */}
         {activeTab === 'pulse' && (
-          <div className="space-y-8">
-            <h2 className={sectionTitle}>Pulse</h2>
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <h2 className={sectionTitle}>Pulse</h2>
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ink-muted">
+                <span className="live-dot" />Live
+              </span>
+            </div>
 
-            {/* Stats row */}
+            {/* Stats row with count-up */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Total meals', value: meals.length },
-                { label: 'Active vendors', value: activeVendors.length },
-                { label: 'Meal of the week', value: meals.find(m => m.is_meal_of_week)?.name ?? '—' },
-                { label: 'Vendors', value: vendors.length },
-              ].map(({ label, value }) => (
-                <div key={label} className={`${card} p-5`}>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">{label}</div>
-                  <div className="font-display text-2xl font-semibold text-ink truncate">{value}</div>
-                </div>
-              ))}
+              <CountUpStat label="Total meals" target={meals.length} />
+              <CountUpStat label="Active vendors" target={activeVendors.length} />
+              <div className={`${card} p-5`}>
+                <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">Meal of the week</div>
+                <div className="font-display text-lg font-semibold text-accent truncate mt-2">{meals.find(m => m.is_meal_of_week)?.name ?? '—'}</div>
+              </div>
+              <CountUpStat label="Vendors" target={vendors.length} />
             </div>
 
             {/* Meals by vendor */}
-            <div className={card}>
-              <div className="px-6 py-4 border-b border-line">
-                <h3 className="font-display text-lg font-semibold text-ink">Meals by vendor</h3>
-              </div>
-              {activeVendors.length === 0 ? (
-                <div className="p-10 text-center text-ink-muted text-sm">No vendors yet.</div>
-              ) : (
-                <div className="divide-y divide-line">
-                  {activeVendors.map(v => {
-                    const count = meals.filter(m => m.vendor_id === v.id).length;
-                    const pct = meals.length ? Math.round((count / meals.length) * 100) : 0;
-                    return (
-                      <div key={v.id} className="flex items-center gap-4 px-6 py-4">
-                        <span className="text-sm font-medium text-ink w-40 truncate">{v.name}</span>
-                        <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-sm font-semibold text-ink w-16 text-right">{count} meals</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <MealsByVendor card={card} activeVendors={activeVendors} meals={meals} />
 
             {/* Recent meals */}
-            <div className={card}>
-              <div className="px-6 py-4 border-b border-line">
-                <h3 className="font-display text-lg font-semibold text-ink">Recently added</h3>
-              </div>
-              <div className="divide-y divide-line">
-                {meals.slice(0, 5).map(meal => (
-                  <div key={meal.id} className="flex items-center gap-4 px-6 py-3">
-                    <img src={meal.image_url} alt={meal.name} className="w-10 h-10 rounded-lg object-cover border border-line" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-ink truncate">{meal.name}</p>
-                      <p className="text-xs text-ink-muted">{meal.vendor}</p>
-                    </div>
-                    <span className="text-xs text-ink-faint">{meal.calories} cal</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RecentlyAdded card={card} meals={meals.slice(0, 5)} />
           </div>
         )}
 
         {/* ══ MEALS TAB ══════════════════════════════════════════════════════ */}
         {activeTab === 'meals' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fadeIn">
             <div className="flex items-center justify-between">
               <h2 className={sectionTitle}>Meals</h2>
-              <Button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} className="flex items-center gap-2">
+              <Button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} className="sheen flex items-center gap-2">
                 <Plus size={16} /> {showForm ? 'Cancel' : 'Add meal'}
               </Button>
             </div>
@@ -487,9 +539,10 @@ export default function AdminPanel() {
                         <button
                           type="button"
                           onClick={() => setShowMacroModal(true)}
-                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary/10 transition-colors"
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary-active border border-primary rounded-lg hover:bg-primary/10 transition-colors"
                         >
-                          ✦ Estimate macros
+                          <Sparkles size={11} className="anim-spin-slow" />
+                          Estimate with AI
                         </button>
                       </div>
                       <div>
@@ -577,7 +630,7 @@ export default function AdminPanel() {
 
         {/* ══ TEAM TAB ═══════════════════════════════════════════════════════ */}
         {activeTab === 'team' && (
-          <div className="space-y-12">
+          <div className="space-y-12 animate-fadeIn">
 
             {/* Super admins */}
             <section>
@@ -586,7 +639,7 @@ export default function AdminPanel() {
                   <h2 className={sectionTitle}>Super admins</h2>
                   <p className="text-ink-muted text-sm mt-1">Full platform access. Each person needs their own Clerk account.</p>
                 </div>
-                <Button onClick={() => setShowSuperadminForm(!showSuperadminForm)} className="flex items-center gap-2">
+                <Button onClick={() => setShowSuperadminForm(!showSuperadminForm)} className="sheen flex items-center gap-2">
                   <Plus size={16} />{showSuperadminForm ? 'Cancel' : 'Add admin'}
                 </Button>
               </div>
@@ -639,7 +692,7 @@ export default function AdminPanel() {
                   <h2 className={sectionTitle}>Vendors</h2>
                   <p className="text-ink-muted text-sm mt-1">Manage restaurants and their team members.</p>
                 </div>
-                <Button onClick={() => setShowVendorForm(!showVendorForm)} className="flex items-center gap-2">
+                <Button onClick={() => setShowVendorForm(!showVendorForm)} className="sheen flex items-center gap-2">
                   <Plus size={16} />{showVendorForm ? 'Cancel' : 'Add vendor'}
                 </Button>
               </div>
@@ -755,23 +808,44 @@ export default function AdminPanel() {
 
       {/* Macro estimation modal */}
       {showMacroModal && (
-        <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }}>
-          <div onClick={e => e.stopPropagation()} className="bg-card rounded-2xl border border-line p-6 w-full max-w-sm">
-            <h3 className="font-display text-lg font-semibold text-ink mb-4">Estimate macros</h3>
-            <p className="text-sm text-ink-muted mb-4">Describe the meal ingredients and we'll estimate the nutritional values.</p>
-            <textarea
-              value={macroInput}
-              onChange={e => { setMacroInput(e.target.value); setMacroError(null); }}
-              placeholder="e.g., 2 cups chicken breast, 1 cup brown rice, steamed broccoli"
-              rows={4}
-              className={INPUT}
-            />
-            {macroError && <span className="block mt-3 text-xs text-accent">{macroError}</span>}
-            <div className="flex gap-3 mt-5">
-              <Button onClick={estimateMacros} disabled={isEstimating || !macroInput.trim()}>
-                {isEstimating ? 'Estimating…' : 'Estimate'}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }} disabled={isEstimating}>Cancel</Button>
+        <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn" onClick={() => { if (!isEstimating) { setShowMacroModal(false); setMacroError(null); setMacroInput(''); } }}>
+          <div onClick={e => e.stopPropagation()} className="bg-card rounded-2xl border border-line w-full max-w-md animate-liftIn shadow-2xl">
+            <div className="p-5 border-b border-line flex items-center gap-2">
+              <Sparkles size={18} className="text-primary anim-spin-slow" />
+              <h3 className="font-display text-lg font-semibold text-ink">Estimate macros</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-ink-muted">Describe the meal ingredients and we'll estimate the nutrition. Powered by Claude.</p>
+              <div className={isEstimating ? 'scan-wrap bg-card border border-line rounded-xl p-3 text-sm leading-relaxed text-ink' : ''}>
+                {isEstimating ? (
+                  <div>{macroInput}<span className="caret" /></div>
+                ) : (
+                  <textarea
+                    value={macroInput}
+                    onChange={e => { setMacroInput(e.target.value); setMacroError(null); }}
+                    placeholder="e.g., 2 cups chicken breast, 1 cup brown rice, steamed broccoli"
+                    rows={4}
+                    className={INPUT}
+                  />
+                )}
+              </div>
+              {macroError && <span className="block text-xs text-accent">{macroError}</span>}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={estimateMacros}
+                  disabled={isEstimating || !macroInput.trim()}
+                  className={`glow-cta px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${isEstimating ? '' : 'hover:bg-primary-hover'} transition-colors`}
+                >
+                  <Sparkles size={13} className={isEstimating ? 'animate-spin' : 'anim-spin-slow'} />
+                  {isEstimating ? 'Estimating…' : 'Estimate'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowMacroModal(false); setMacroError(null); setMacroInput(''); }}
+                  disabled={isEstimating}
+                  className="px-4 py-2.5 rounded-xl bg-card border border-line text-sm font-semibold text-ink hover:bg-surface transition-colors disabled:opacity-50"
+                >Cancel</button>
+              </div>
             </div>
           </div>
         </div>

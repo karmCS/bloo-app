@@ -93,7 +93,7 @@ export default function Homepage() {
             <div className="font-display text-2xl sm:text-3xl font-semibold tracking-tight leading-none">
               <span className="italic text-primary">bloo</span>
             </div>
-            <div className="text-xs text-ink-muted mt-1 truncate">Macros from your favourite local kitchens</div>
+            <div className="text-xs text-ink-muted mt-1 truncate">A community driven wellness project</div>
           </div>
         </div>
         <button
@@ -116,16 +116,16 @@ export default function Homepage() {
             <div ref={heroReveal} className="lg:col-span-7 reveal stagger">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur border border-line text-[11px] font-bold uppercase tracking-widest text-ink">
                 <span className="live-dot" />
-                Loma Linda · Blue Zone
+                Loma Linda Blue Zone
               </span>
               <h1 className="font-display font-semibold tracking-tight text-ink mt-5 sm:mt-6" style={{ fontSize: 'clamp(36px, 6vw, 60px)', lineHeight: 1.02 }}>
                 Rooted in one of the world's <span className="italic text-accent">Blue Zones</span>.
               </h1>
               <p className="text-ink-muted text-base sm:text-[17px] mt-5 sm:mt-6 max-w-xl leading-relaxed">
-                Loma Linda is one of five globally recognized Blue Zones — regions where people consistently live longer, healthier lives. Its local food culture reflects that legacy.
+                Loma Linda is one of five globally recognized Blue Zones, regions where people consistently live longer, healthier lives. Its local food culture reflects that legacy.
               </p>
               <p className="text-ink-muted text-base sm:text-[17px] mt-4 max-w-xl leading-relaxed">
-                <span className="italic text-primary font-medium">bloo</span> catalogs macros and meals from small businesses in the area, offering a modern window into these traditions — nutritional transparency paired with community-driven dining. A digital extension of the Blue Zone lifestyle: intentional, informed, and rooted in community.
+                <span className="italic text-primary font-medium">bloo</span> catalogs macros and meals from small businesses in the area, offering a modern window into these traditions. We aim to display nutritional transparency paired with community-driven dining as a digital extension of the Blue Zone lifestyle: intentional, informed, and rooted in community.
               </p>
               <div className="mt-7 sm:mt-8 flex flex-wrap items-center gap-3">
                 <button

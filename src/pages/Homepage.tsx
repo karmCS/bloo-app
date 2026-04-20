@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Meal } from '../lib/supabase';
 import { useMeals } from '../hooks/useMeals';
 import { useActiveVendors } from '../hooks/useActiveVendors';
@@ -8,13 +7,9 @@ import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
 import Footer from '../components/Footer';
 
-const RING_CIRC = 251.2;
-const dasharray = (pct: number) => RING_CIRC * (1 - Math.min(1, Math.max(0, pct / 100)));
-
 export default function Homepage() {
   const { meals, loading } = useMeals();
   const { vendors, loading: vendorsLoading } = useActiveVendors();
-  const navigate = useNavigate();
 
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,15 +62,7 @@ export default function Homepage() {
 
   const heroReveal = useReveal<HTMLDivElement>();
   const heroFloatReveal = useReveal<HTMLDivElement>();
-  const ringsSectionReveal = useReveal<HTMLDivElement>();
-  const ringProteinReveal = useReveal<HTMLDivElement>(0.4);
-  const ringCarbsReveal = useReveal<HTMLDivElement>(0.4);
-  const ringFatsReveal = useReveal<HTMLDivElement>(0.4);
   const gridReveal = useReveal<HTMLDivElement>(0.05);
-
-  const proteinTarget = motw ? dasharray(Math.min(100, (motw.protein / 54) * 100)) : RING_CIRC;
-  const carbsTarget = motw ? dasharray(Math.min(100, (motw.carbs / 75) * 100)) : RING_CIRC;
-  const fatsTarget = motw ? dasharray(Math.min(100, (motw.fats / 58) * 100)) : RING_CIRC;
 
   const scrollToMenu = () => {
     document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -290,100 +277,6 @@ export default function Homepage() {
           )}
         </div>
       </section>
-
-      {/* ===== 3 · Macro rings (MOTW breakdown) ===== */}
-      {motw && (
-        <section className="px-4 sm:px-6 mt-16 sm:mt-20">
-          <div ref={ringsSectionReveal} className="reveal max-w-[1240px] mx-auto rounded-[28px] border border-line bg-card p-6 sm:p-8 lg:p-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
-              <div className="lg:col-span-5">
-                <div className="text-[11px] font-bold uppercase tracking-widest text-accent mb-2">Meal breakdown</div>
-                <h3 className="font-display text-3xl sm:text-4xl font-semibold leading-tight">{motw.name}</h3>
-                <p className="text-ink-muted mt-3">
-                  {motw.description || `Served by ${motw.vendor}. Estimated from the vendor's ingredient list.`}
-                </p>
-                <div className="mt-6 flex items-center gap-3 flex-wrap">
-                  <div className="font-display text-5xl font-semibold">
-                    {motw.calories}
-                    <span className="text-lg text-ink-muted font-normal ml-1">kcal</span>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-md bg-macro-green/10 text-macro-green text-[11px] font-bold">
-                    {Math.round((motw.calories / 2000) * 100)}% of daily
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => motw.vendor_id && navigate(`/restaurant/${motw.vendor_id}`)}
-                  className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-ink text-white text-sm font-bold hover:bg-ink/90 transition-colors"
-                >
-                  See {motw.vendor}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                </button>
-              </div>
-
-              <div className="lg:col-span-7 grid grid-cols-3 gap-3 sm:gap-4">
-                <div
-                  ref={ringProteinReveal}
-                  className="reveal bg-surface/50 rounded-2xl border border-line p-3 sm:p-5 flex flex-col items-center"
-                  style={{ ['--circ' as string]: String(RING_CIRC), ['--target' as string]: String(proteinTarget) } as React.CSSProperties}
-                >
-                  <div className="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px]">
-                    <svg className="svg-ring w-full h-full" viewBox="0 0 100 100">
-                      <circle className="ring-track" cx="50" cy="50" r="40" strokeWidth="8" fill="none" />
-                      <circle className="ring-fill" cx="50" cy="50" r="40" strokeWidth="8" stroke="#2D6A4F" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="font-display text-2xl sm:text-3xl font-semibold">{motw.protein}<span className="text-sm text-ink-muted font-normal">g</span></div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Protein</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-[11px] sm:text-xs text-ink-muted font-semibold text-center">
-                    {Math.round((motw.protein / 54) * 100)}% of daily
-                  </div>
-                </div>
-                <div
-                  ref={ringCarbsReveal}
-                  className="reveal bg-surface/50 rounded-2xl border border-line p-3 sm:p-5 flex flex-col items-center"
-                  style={{ ['--circ' as string]: String(RING_CIRC), ['--target' as string]: String(carbsTarget) } as React.CSSProperties}
-                >
-                  <div className="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px]">
-                    <svg className="svg-ring w-full h-full" viewBox="0 0 100 100">
-                      <circle className="ring-track" cx="50" cy="50" r="40" strokeWidth="8" fill="none" />
-                      <circle className="ring-fill" cx="50" cy="50" r="40" strokeWidth="8" stroke="#7CB9E8" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="font-display text-2xl sm:text-3xl font-semibold">{motw.carbs}<span className="text-sm text-ink-muted font-normal">g</span></div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Carbs</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-[11px] sm:text-xs text-ink-muted font-semibold text-center">
-                    {Math.round((motw.carbs / 75) * 100)}% of daily
-                  </div>
-                </div>
-                <div
-                  ref={ringFatsReveal}
-                  className="reveal bg-surface/50 rounded-2xl border border-line p-3 sm:p-5 flex flex-col items-center"
-                  style={{ ['--circ' as string]: String(RING_CIRC), ['--target' as string]: String(fatsTarget) } as React.CSSProperties}
-                >
-                  <div className="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px]">
-                    <svg className="svg-ring w-full h-full" viewBox="0 0 100 100">
-                      <circle className="ring-track" cx="50" cy="50" r="40" strokeWidth="8" fill="none" />
-                      <circle className="ring-fill" cx="50" cy="50" r="40" strokeWidth="8" stroke="#D4522A" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <div className="font-display text-2xl sm:text-3xl font-semibold">{motw.fats}<span className="text-sm text-ink-muted font-normal">g</span></div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Fats</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-[11px] sm:text-xs text-ink-muted font-semibold text-center">
-                    {Math.round((motw.fats / 58) * 100)}% of daily
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ===== 5 · Vendor marquee ===== */}
       {!vendorsLoading && vendors.length > 0 && (

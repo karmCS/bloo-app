@@ -103,7 +103,7 @@ export default function Homepage() {
             <div ref={heroReveal} className="lg:col-span-7 reveal stagger">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur border border-line text-[11px] font-bold uppercase tracking-widest text-ink">
                 <span className="live-dot" />
-                Loma Linda Blue Zone
+                Loma Linda 
               </span>
               <h1 className="font-display font-semibold tracking-tight text-ink mt-5 sm:mt-6" style={{ fontSize: 'clamp(36px, 6vw, 60px)', lineHeight: 1.02 }}>
                 Rooted in one of the world's <span className="italic text-accent">Blue Zones</span>.
@@ -162,7 +162,7 @@ export default function Homepage() {
                   <div className="h-40 sm:h-48 relative overflow-hidden">
                     <img className="w-full h-full object-cover" src={motw.image_url} alt={motw.name} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-accent text-white text-[10px] font-bold uppercase tracking-widest">Of the week</span>
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-accent text-white text-[10px] font-bold uppercase tracking-widest">featured meal the week</span>
                   </div>
                   <div className="p-4 bg-card">
                     <div className="font-display text-lg font-semibold leading-tight">{motw.name}</div>

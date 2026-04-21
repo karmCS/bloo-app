@@ -19,15 +19,15 @@ export default function AuthRedirect() {
     }
 
     const resolveRole = async () => {
+      const authedSupabase = await getSupabaseWithAuth(session);
+
       const email = user.primaryEmailAddress?.emailAddress;
       if (email) {
-        await supabase.rpc('claim_vendor_invite', {
+        await authedSupabase.rpc('claim_vendor_invite', {
           p_email: email,
           p_clerk_user_id: user.id,
         });
       }
-
-      const authedSupabase = await getSupabaseWithAuth(session);
 
       const { data: vendorUser, error } = await authedSupabase
         .from('vendor_users')

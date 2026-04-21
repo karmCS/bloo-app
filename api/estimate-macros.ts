@@ -1,8 +1,18 @@
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-haiku-4-5-20251001';
+const MAX_INPUT_CHARS = 2000;
 
 type AnthropicResponse = {
   content?: Array<{ type: string; text?: string }>;
+};
+
+type VercelReq = {
+  method?: string;
+  body?: unknown;
+};
+type VercelRes = {
+  status: (code: number) => VercelRes;
+  json: (body: unknown) => void;
 };
 
 async function callAnthropic(body: Record<string, unknown>): Promise<string> {
@@ -28,7 +38,7 @@ function stripFences(text: string): string {
     .trim();
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelReq, res: VercelRes) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
     return;
@@ -38,6 +48,10 @@ export default async function handler(req: any, res: any) {
     const { ingredients } = (req.body ?? {}) as { ingredients?: string };
     if (!ingredients || typeof ingredients !== 'string' || ingredients.trim().length === 0) {
       res.status(400).json({ error: 'Please enter food ingredients only.' });
+      return;
+    }
+    if (ingredients.length > MAX_INPUT_CHARS) {
+      res.status(400).json({ error: 'Input too long — keep it under 2000 characters.' });
       return;
     }
 

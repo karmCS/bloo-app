@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useClerk, useUser, useSession, UserProfile } from '@clerk/react';
-import { supabase, Meal } from '../lib/supabase';
+import { Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
+import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
 import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles } from 'lucide-react';
@@ -104,11 +105,12 @@ export default function VendorPanel() {
   };
 
   const uploadImage = async (file: File) => {
-    const ext = file.name.split('.').pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false });
+    const mime = assertValidImage(file);
+    const client = await getSupabaseWithAuth(session);
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extFor(mime)}`;
+    const { error } = await client.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false, contentType: mime });
     if (error) throw error;
-    return supabase.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
+    return client.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,7 +144,7 @@ export default function VendorPanel() {
       resetForm();
       await refetchMeals();
     } catch (err) {
-      alert(`Failed to save meal: ${(err as any)?.message || 'Please try again.'}`);
+      alert(`Failed to save meal: ${errorMessage(err)}`);
     } finally {
       setIsUploading(false);
     }

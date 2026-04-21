@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useClerk, useUser, useSession } from '@clerk/react';
 import { supabase, Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
+import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import { useMeals } from '../hooks/useMeals';
 import { useReveal } from '../hooks/useReveal';
 import { useCountUp } from '../hooks/useCountUp';
@@ -245,19 +246,21 @@ export default function AdminPanel() {
 
   // ── Meal handlers ─────────────────────────────────────────────────────────
   const uploadImage = async (file: File) => {
-    const ext = file.name.split('.').pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false });
+    const mime = assertValidImage(file);
+    const client = await getSupabaseWithAuth(session);
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extFor(mime)}`;
+    const { error } = await client.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false, contentType: mime });
     if (error) throw error;
-    return supabase.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
+    return client.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
   };
 
   const uploadVendorLogo = async (file: File) => {
-    const ext = file.name.split('.').pop();
-    const path = `vendor-logos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('meal-images').upload(path, file, { cacheControl: '3600', upsert: false });
+    const mime = assertValidImage(file);
+    const client = await getSupabaseWithAuth(session);
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extFor(mime)}`;
+    const { error } = await client.storage.from('vendor-logos').upload(path, file, { cacheControl: '3600', upsert: false, contentType: mime });
     if (error) throw error;
-    return supabase.storage.from('meal-images').getPublicUrl(path).data.publicUrl;
+    return client.storage.from('vendor-logos').getPublicUrl(path).data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -295,7 +298,7 @@ export default function AdminPanel() {
       resetForm();
       refetch();
     } catch (err) {
-      alert(`Failed to save meal: ${(err as any)?.message || 'Please try again.'}`);
+      alert(`Failed to save meal: ${errorMessage(err)}`);
     } finally {
       setIsUploading(false);
     }
@@ -340,7 +343,7 @@ export default function AdminPanel() {
       setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
       setVendorLogoFile(null); setShowVendorForm(false);
       fetchTeamData();
-    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
     finally { setVendorFormLoading(false); }
   };
 
@@ -352,7 +355,7 @@ export default function AdminPanel() {
       if (error) throw error;
       setSuperadminFormData({ clerk_user_id: '', display_name: '' }); setShowSuperadminForm(false);
       fetchTeamData();
-    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
     finally { setSuperadminFormLoading(false); }
   };
 
@@ -364,7 +367,7 @@ export default function AdminPanel() {
       if (error) throw error;
       setVendorMemberFormData({ email: '', display_name: '' }); setShowVendorMemberFormVendorId(null);
       fetchTeamData();
-    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
     finally { setVendorMemberFormLoading(false); }
   };
 
@@ -377,7 +380,7 @@ export default function AdminPanel() {
       const { error } = await client.from('vendors').update({ name: editVendorFormData.name, slug: editVendorFormData.slug, contact_email: editVendorFormData.contact_email, venmo_handle: editVendorFormData.venmo_handle || null, zelle_contact: editVendorFormData.zelle_contact || null, description: editVendorFormData.description || null, logo_url: logoUrl }).eq('id', vendorId);
       if (error) throw error;
       setEditingVendorId(null); setEditVendorLogoFile(null); fetchTeamData();
-    } catch (err) { alert(`Failed: ${(err as any)?.message}`); }
+    } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
     finally { setVendorUpdateLoading(false); }
   };
 

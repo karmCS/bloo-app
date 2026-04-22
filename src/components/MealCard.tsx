@@ -6,7 +6,15 @@ interface MealCardProps {
   index?: number;
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isNewThisWeek(createdAt: string): boolean {
+  return Date.now() - new Date(createdAt).getTime() < SEVEN_DAYS_MS;
+}
+
 export default function MealCard({ meal, onClick, index = 0 }: MealCardProps) {
+  const showNewBadge = isNewThisWeek(meal.created_at);
+
   return (
     <div
       onClick={onClick}
@@ -19,6 +27,12 @@ export default function MealCard({ meal, onClick, index = 0 }: MealCardProps) {
           alt={meal.name}
           className="meal-img w-full h-full object-cover"
         />
+
+        {showNewBadge && (
+          <span className="absolute top-2.5 left-2.5 z-10 px-2.5 py-1 bg-primary text-white text-[10px] font-bold rounded-full tracking-wide uppercase shadow-sm">
+            New this week
+          </span>
+        )}
 
         {/* Slide-up macro strip on hover */}
         <div className="macro-strip">

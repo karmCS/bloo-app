@@ -88,6 +88,8 @@ interface Vendor {
   cuisine_tags: string[] | null;
   logo_url: string | null;
   description: string | null;
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -196,9 +198,9 @@ export default function AdminPanel() {
   const [expandedSuperadminId, setExpandedSuperadminId] = useState<string | null>(null);
   const [showVendorMemberFormVendorId, setShowVendorMemberFormVendorId] = useState<string | null>(null);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
-  const [editVendorFormData, setEditVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
+  const [editVendorFormData, setEditVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' });
   const [editVendorLogoFile, setEditVendorLogoFile] = useState<File | null>(null);
-  const [vendorFormData, setVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
+  const [vendorFormData, setVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' });
   const [vendorLogoFile, setVendorLogoFile] = useState<File | null>(null);
   const [superadminFormData, setSuperadminFormData] = useState({ clerk_user_id: '', display_name: '' });
   const [vendorMemberFormData, setVendorMemberFormData] = useState({ email: '', display_name: '' });
@@ -339,9 +341,9 @@ export default function AdminPanel() {
       let logoUrl = vendorFormData.logo_url || null;
       if (vendorLogoFile) logoUrl = await uploadVendorLogo(vendorLogoFile);
       const client = await getSupabaseWithAuth(session);
-      const { error } = await client.from('vendors').insert([{ name: vendorFormData.name, slug: vendorFormData.slug, contact_email: vendorFormData.contact_email, venmo_handle: vendorFormData.venmo_handle || null, zelle_contact: vendorFormData.zelle_contact || null, description: vendorFormData.description || null, logo_url: logoUrl, is_active: true }]);
+      const { error } = await client.from('vendors').insert([{ name: vendorFormData.name, slug: vendorFormData.slug, contact_email: vendorFormData.contact_email, venmo_handle: vendorFormData.venmo_handle || null, zelle_contact: vendorFormData.zelle_contact || null, description: vendorFormData.description || null, logo_url: logoUrl, instagram_handle: vendorFormData.instagram_handle.replace(/^@/, '') || null, tiktok_handle: vendorFormData.tiktok_handle.replace(/^@/, '') || null, is_active: true }]);
       if (error) throw error;
-      setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' });
+      setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' });
       setVendorLogoFile(null); setShowVendorForm(false);
       fetchTeamData();
     } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
@@ -378,7 +380,7 @@ export default function AdminPanel() {
       let logoUrl = editVendorFormData.logo_url || null;
       if (editVendorLogoFile) logoUrl = await uploadVendorLogo(editVendorLogoFile);
       const client = await getSupabaseWithAuth(session);
-      const { error } = await client.from('vendors').update({ name: editVendorFormData.name, slug: editVendorFormData.slug, contact_email: editVendorFormData.contact_email, venmo_handle: editVendorFormData.venmo_handle || null, zelle_contact: editVendorFormData.zelle_contact || null, description: editVendorFormData.description || null, logo_url: logoUrl }).eq('id', vendorId);
+      const { error } = await client.from('vendors').update({ name: editVendorFormData.name, slug: editVendorFormData.slug, contact_email: editVendorFormData.contact_email, venmo_handle: editVendorFormData.venmo_handle || null, zelle_contact: editVendorFormData.zelle_contact || null, description: editVendorFormData.description || null, logo_url: logoUrl, instagram_handle: editVendorFormData.instagram_handle.replace(/^@/, '') || null, tiktok_handle: editVendorFormData.tiktok_handle.replace(/^@/, '') || null }).eq('id', vendorId);
       if (error) throw error;
       setEditingVendorId(null); setEditVendorLogoFile(null); fetchTeamData();
     } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
@@ -722,7 +724,9 @@ export default function AdminPanel() {
                     <div><label className={LABEL}>Slug</label><input className={`${INPUT} font-mono`} value={vendorFormData.slug} onChange={e => setVendorFormData(d => ({ ...d, slug: e.target.value }))} required placeholder="its-va-meals" /></div>
                     <div><label className={LABEL}>Contact email</label><input className={INPUT} type="email" value={vendorFormData.contact_email} onChange={e => setVendorFormData(d => ({ ...d, contact_email: e.target.value }))} required /></div>
                     <div><label className={LABEL}>Venmo <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.venmo_handle} onChange={e => setVendorFormData(d => ({ ...d, venmo_handle: e.target.value }))} /></div>
-                    <div className="md:col-span-2 flex gap-3"><Button type="submit" disabled={vendorFormLoading}>{vendorFormLoading ? 'Adding…' : 'Add vendor'}</Button><Button type="button" variant="secondary" onClick={() => { setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '' }); setVendorLogoFile(null); setShowVendorForm(false); }}>Cancel</Button></div>
+                    <div><label className={LABEL}>Instagram <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.instagram_handle} onChange={e => setVendorFormData(d => ({ ...d, instagram_handle: e.target.value }))} placeholder="handle (no @)" /></div>
+                    <div><label className={LABEL}>TikTok <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.tiktok_handle} onChange={e => setVendorFormData(d => ({ ...d, tiktok_handle: e.target.value }))} placeholder="handle (no @)" /></div>
+                    <div className="md:col-span-2 flex gap-3"><Button type="submit" disabled={vendorFormLoading}>{vendorFormLoading ? 'Adding…' : 'Add vendor'}</Button><Button type="button" variant="secondary" onClick={() => { setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' }); setVendorLogoFile(null); setShowVendorForm(false); }}>Cancel</Button></div>
                   </form>
                 </div>
               )}
@@ -763,11 +767,13 @@ export default function AdminPanel() {
                             <div><label className={LABEL}>Slug</label><input className={`${INPUT} font-mono`} value={editVendorFormData.slug} onChange={e => setEditVendorFormData(d => ({ ...d, slug: e.target.value }))} required /></div>
                             <div><label className={LABEL}>Email</label><input className={INPUT} type="email" value={editVendorFormData.contact_email} onChange={e => setEditVendorFormData(d => ({ ...d, contact_email: e.target.value }))} required /></div>
                             <div><label className={LABEL}>Venmo</label><input className={INPUT} value={editVendorFormData.venmo_handle} onChange={e => setEditVendorFormData(d => ({ ...d, venmo_handle: e.target.value }))} /></div>
+                            <div><label className={LABEL}>Instagram</label><input className={INPUT} value={editVendorFormData.instagram_handle} onChange={e => setEditVendorFormData(d => ({ ...d, instagram_handle: e.target.value }))} placeholder="handle (no @)" /></div>
+                            <div><label className={LABEL}>TikTok</label><input className={INPUT} value={editVendorFormData.tiktok_handle} onChange={e => setEditVendorFormData(d => ({ ...d, tiktok_handle: e.target.value }))} placeholder="handle (no @)" /></div>
                             <div className="md:col-span-2 flex gap-2"><Button type="submit" className="text-sm py-2" disabled={vendorUpdateLoading}>{vendorUpdateLoading ? 'Saving…' : 'Save'}</Button><Button type="button" variant="secondary" className="text-sm py-2" onClick={() => { setEditingVendorId(null); setEditVendorLogoFile(null); }}>Cancel</Button></div>
                           </form>
                         ) : (
                           <div className="flex flex-wrap gap-2">
-                            <button onClick={() => { setEditVendorFormData({ name: vendor.name, slug: vendor.slug, contact_email: vendor.contact_email, venmo_handle: vendor.venmo_handle ?? '', zelle_contact: vendor.zelle_contact ?? '', description: vendor.description ?? '', logo_url: vendor.logo_url ?? '' }); setEditVendorLogoFile(null); setEditingVendorId(vendor.id); }} className="px-3 py-1.5 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20">Edit details</button>
+                            <button onClick={() => { setEditVendorFormData({ name: vendor.name, slug: vendor.slug, contact_email: vendor.contact_email, venmo_handle: vendor.venmo_handle ?? '', zelle_contact: vendor.zelle_contact ?? '', description: vendor.description ?? '', logo_url: vendor.logo_url ?? '', instagram_handle: vendor.instagram_handle ?? '', tiktok_handle: vendor.tiktok_handle ?? '' }); setEditVendorLogoFile(null); setEditingVendorId(vendor.id); }} className="px-3 py-1.5 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20">Edit details</button>
                             <button onClick={() => handleVendorToggleActive(vendor)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${vendor.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-macro-green/10 text-macro-green hover:bg-macro-green/20'}`}>{vendor.is_active ? 'Deactivate' : 'Activate'}</button>
                             <button onClick={() => navigate(`/admin/vendor/${vendor.slug}`)} className="px-3 py-1.5 text-xs font-semibold bg-surface text-ink border border-line rounded-lg hover:bg-line">Open vendor panel →</button>
                           </div>

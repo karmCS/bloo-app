@@ -23,7 +23,27 @@
       "Bash(env)",
       "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py \"macro counter local food vendor health wellness marketplace\" --design-system -p \"bloo\" -f markdown)",
       "mcp__agentation__agentation_get_all_pending",
-      "mcp__agentation__agentation_resolve"
+      "mcp__agentation__agentation_resolve",
+      "Bash(cp \"C:\\\\Users\\\\mark3\\\\.claude\\\\projects\\\\C--Users-mark3-projects-bloo-app\\\\e2892898-310e-42b0-a9ce-45b09e96cdbb\\\\tool-results\\\\webfetch-1776834061589-g506jg.bin\" design.gz)",
+      "Bash(gunzip -k design.gz)",
+      "Bash(tar -xzf design.gz)",
+      "Bash(tar -xf design)",
+      "Bash(git checkout *)",
+      "Bash(git fetch *)",
+      "Bash(xargs git *)",
+      "Bash(git merge *)",
+      "Bash(supabase --version)",
+      "Bash(supabase projects *)",
+      "Bash(supabase link *)",
+      "Bash(supabase db *)",
+      "Bash(supabase migration *)",
+      "Bash(node -e ' *)",
+      "Bash(cp \"/c/Users/mark3/.claude/projects/C--Users-mark3-projects-bloo-app/e2892898-310e-42b0-a9ce-45b09e96cdbb/tool-results/mcp-agentation-agentation_get_all_pending-1776840778432.txt\" /tmp/ann.json)",
+      "Bash(node _ann_dedupe.cjs \"/c/Users/mark3/.claude/projects/C--Users-mark3-projects-bloo-app/e2892898-310e-42b0-a9ce-45b09e96cdbb/tool-results/mcp-agentation-agentation_get_all_pending-1776840778432.txt\")",
+      "Bash(node _ann_dedupe.cjs \"/c/Users/mark3/.claude/projects/C--Users-mark3-projects-bloo-app/e2892898-310e-42b0-a9ce-45b09e96cdbb/tool-results/mcp-agentation-agentation_get_all_pending-1776840924051.txt\")",
+      "Bash(node *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)"
     ]
   }
 }

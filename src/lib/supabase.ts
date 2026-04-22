@@ -23,6 +23,16 @@ export interface Vendor {
   tiktok_handle?: string | null;
 }
 
+export interface MealAvailability {
+  id: string;
+  meal_id: string;
+  vendor_id: string;
+  week_id: string;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Meal {
   id: string;
   name: string;

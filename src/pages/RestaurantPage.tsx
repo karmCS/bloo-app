@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Instagram, Mail } from 'lucide-react';
-import { useMealsByVendor } from '../hooks/useMealsByVendor';
+import { useMealsAvailableThisWeek } from '../hooks/useMealsAvailableThisWeek';
 import { useActiveVendors } from '../hooks/useActiveVendors';
 import MealCard from '../components/MealCard';
 import MealDetailModal from '../components/MealDetailModal';
@@ -18,7 +18,7 @@ function TikTokIcon({ size = 16 }: { size?: number }) {
 export default function RestaurantPage() {
   const { vendorId } = useParams<{ vendorId: string }>();
   const navigate = useNavigate();
-  const { meals, loading: mealsLoading } = useMealsByVendor(vendorId ?? null);
+  const { meals, loading: mealsLoading } = useMealsAvailableThisWeek(vendorId ?? null);
   const { vendors } = useActiveVendors();
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -118,8 +118,8 @@ export default function RestaurantPage() {
           </div>
         ) : meals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
-            <p className="font-display text-xl font-semibold text-ink mb-2">No meals yet</p>
-            <p className="text-ink-muted text-sm">This restaurant hasn't added any meals.</p>
+            <p className="font-display text-xl font-semibold text-ink mb-2">No meals available this week</p>
+            <p className="text-ink-muted text-sm">Check back soon — the menu may be updated.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

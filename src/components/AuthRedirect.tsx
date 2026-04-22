@@ -14,7 +14,7 @@ export default function AuthRedirect() {
     if (!isLoaded) return;
 
     if (!isSignedIn || !user) {
-      navigate('/login', { replace: true });
+      navigate('/vendor', { replace: true });
       return;
     }
 

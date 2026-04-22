@@ -5,7 +5,12 @@ import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 
 type CheckState = 'loading' | 'authorized' | 'unauthorized' | 'not-in-table';
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  loginPath?: string;
+}
+
+export default function ProtectedRoute({ children, loginPath = '/vendor' }: ProtectedRouteProps) {
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
   const { session } = useSession();
@@ -57,7 +62,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (state === 'unauthorized') {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPath} replace />;
   }
 
   return <>{children}</>;

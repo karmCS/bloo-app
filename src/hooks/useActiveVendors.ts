@@ -9,7 +9,7 @@ export function useActiveVendors() {
   const fetchVendors = useCallback(async () => {
     const { data, error: fetchError } = await supabase
       .from('vendors')
-      .select('id, name, logo_url, description, contact_email, instagram_handle, tiktok_handle')
+      .select('id, name, logo_url, description, editorial_body, website_url, contact_email, instagram_handle, tiktok_handle')
       .eq('is_active', true)
       .order('name');
 

@@ -18,9 +18,21 @@ export interface Vendor {
   name: string;
   logo_url?: string | null;
   description?: string | null;
+  editorial_body?: string | null;
+  website_url?: string | null;
   contact_email?: string | null;
   instagram_handle?: string | null;
   tiktok_handle?: string | null;
+}
+
+export interface VendorPhoto {
+  id: string;
+  vendor_id: string;
+  image_url: string;
+  caption?: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MealAvailability {

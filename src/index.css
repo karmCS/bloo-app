@@ -36,6 +36,14 @@
 @keyframes marquee     { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 @keyframes scanMove    { 0% { transform: translateY(0) } 50% { transform: translateY(58px) } 100% { transform: translateY(0) } }
 @keyframes heartBurst  { 0% { transform: scale(0); opacity: .9 } 100% { transform: scale(2.4); opacity: 0 } }
+@keyframes menuTabSwap { 0% { opacity: 0; transform: translateY(-8px); filter: blur(2px); } 100% { opacity: 1; transform: translateY(0); filter: blur(0); } }
+.animate-menuTabSwap { animation: menuTabSwap .45s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes kenBurns    { 0% { transform: scale(1.0) translate(0, 0); } 100% { transform: scale(1.12) translate(-1.5%, -1.5%); } }
+
+.gallery-ken-burns { animation: kenBurns 7s ease-out both; transform-origin: center center; }
+@media (prefers-reduced-motion: reduce) {
+  .gallery-ken-burns { animation: none; transform: none; }
+}
 
 @layer utilities {
   .animate-fadeIn    { animation: fadeIn .35s ease-out both; }

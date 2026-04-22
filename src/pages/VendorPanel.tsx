@@ -7,6 +7,7 @@ import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
 import DietaryTagPicker from '../components/DietaryTagPicker';
+import GalleryManager from '../components/GalleryManager';
 import { getCurrentWeekId, getWeekLabel } from '../lib/weekUtils';
 import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles, Instagram, Mail, Check } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export default function VendorPanel() {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [pageReady, setPageReady] = useState(false);
   const [activeSection, setActiveSection] = useState<'menu' | 'profile'>('menu');
-  const [profileFormData, setProfileFormData] = useState({ contact_email: '', instagram_handle: '', tiktok_handle: '' });
+  const [profileFormData, setProfileFormData] = useState({ contact_email: '', instagram_handle: '', tiktok_handle: '', website_url: '', description: '', editorial_body: '' });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
 
@@ -95,7 +96,7 @@ export default function VendorPanel() {
     if (!user || !session || !slug) return;
     const init = async () => {
       const client = await getSupabaseWithAuth(session);
-      const { data: vendor } = await client.from('vendors').select('id, name, contact_email, instagram_handle, tiktok_handle').eq('slug', slug).maybeSingle();
+      const { data: vendor } = await client.from('vendors').select('id, name, contact_email, instagram_handle, tiktok_handle, website_url, description, editorial_body').eq('slug', slug).maybeSingle();
       if (!vendor) { navigate('/unauthorized', { replace: true }); return; }
 
       const { data: vendorUser } = await client.from('vendor_users').select('role, vendor_id').eq('clerk_user_id', user.id).maybeSingle();
@@ -110,6 +111,9 @@ export default function VendorPanel() {
         contact_email: (vendor as { contact_email?: string | null }).contact_email ?? '',
         instagram_handle: (vendor as { instagram_handle?: string | null }).instagram_handle ?? '',
         tiktok_handle: (vendor as { tiktok_handle?: string | null }).tiktok_handle ?? '',
+        website_url: (vendor as { website_url?: string | null }).website_url ?? '',
+        description: (vendor as { description?: string | null }).description ?? '',
+        editorial_body: (vendor as { editorial_body?: string | null }).editorial_body ?? '',
       });
 
       const { data: mealsData } = await client.from('meals').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: false });
@@ -194,7 +198,6 @@ export default function VendorPanel() {
         fats: parseInt(formData.fats) || 0,
         ingredients: formData.ingredients.split(',').map(i => i.trim()),
         dietary_tags: formData.dietary_tags,
-        ...(isSuperadmin ? { is_meal_of_week: formData.is_meal_of_week } : {}),
       };
 
       const client = await getSupabaseWithAuth(session);
@@ -250,6 +253,9 @@ export default function VendorPanel() {
         contact_email: profileFormData.contact_email.trim() || null,
         instagram_handle: profileFormData.instagram_handle.trim().replace(/^@/, '') || null,
         tiktok_handle: profileFormData.tiktok_handle.trim().replace(/^@/, '') || null,
+        website_url: profileFormData.website_url.trim() || null,
+        description: profileFormData.description.trim() || null,
+        editorial_body: profileFormData.editorial_body.trim() || null,
       }).eq('id', vendorId);
       if (error) throw error;
       setProfileSaved(true);
@@ -408,12 +414,6 @@ export default function VendorPanel() {
                     <input className={INPUT} type="number" step="0.01" min="0" value={formData.price} onChange={e => setFormData(d => ({ ...d, price: e.target.value }))} required placeholder="12.99" />
                     <p className="text-[10px] text-ink-faint mt-1">Displayed for reference — bloo is catalog-only.</p>
                   </div>
-                  {isSuperadmin && (
-                    <label className="flex items-center gap-2.5 cursor-pointer">
-                      <input type="checkbox" checked={formData.is_meal_of_week} onChange={e => setFormData(d => ({ ...d, is_meal_of_week: e.target.checked }))} className="w-4 h-4 accent-primary rounded" />
-                      <span className="text-sm font-medium text-ink">Meal of the week</span>
-                    </label>
-                  )}
                 </div>
                 <div className="space-y-4 lg:col-span-8">
                   <div>
@@ -516,74 +516,125 @@ export default function VendorPanel() {
 
         {/* Profile section */}
         {activeSection === 'profile' && (
-          <div className={`${card} p-6 max-w-xl animate-liftIn`}>
-            <div className="mb-6">
-              <h2 className="font-display text-2xl font-semibold text-ink">Profile</h2>
-              <p className="text-ink-muted text-sm mt-1">Social handles and contact info shown on your public page.</p>
+          <div className="space-y-6 animate-liftIn">
+            <div className={`${card} p-6 max-w-3xl`}>
+              <div className="mb-6">
+                <h2 className="font-display text-2xl font-semibold text-ink">Profile</h2>
+                <p className="text-ink-muted text-sm mt-1">This is what diners see on your public kitchen page.</p>
+              </div>
+              <form onSubmit={handleProfileSave} className="space-y-5">
+                <div>
+                  <label className={LABEL}>Short blurb <span className="normal-case font-normal text-ink-faint">(shown on the directory card)</span></label>
+                  <textarea
+                    className={`${INPUT} resize-none`}
+                    rows={2}
+                    value={profileFormData.description}
+                    onChange={e => e.target.value.length <= 240 && setProfileFormData(d => ({ ...d, description: e.target.value }))}
+                    placeholder="One sentence about your kitchen — what you cook, who it's for."
+                  />
+                  <p className={`text-right text-[10px] mt-1 ${profileFormData.description.length > 200 ? 'text-accent' : 'text-ink-faint'}`}>
+                    {profileFormData.description.length}/240
+                  </p>
+                </div>
+
+                <div>
+                  <label className={LABEL}>Editorial intro <span className="normal-case font-normal text-ink-faint">(long-form, shown on your vendor page)</span></label>
+                  <textarea
+                    className={`${INPUT} resize-y`}
+                    rows={6}
+                    value={profileFormData.editorial_body}
+                    onChange={e => e.target.value.length <= 2000 && setProfileFormData(d => ({ ...d, editorial_body: e.target.value }))}
+                    placeholder="Your story — who's behind the kitchen, how you cook, what you stand for. Line breaks are preserved."
+                  />
+                  <p className={`text-right text-[10px] mt-1 ${profileFormData.editorial_body.length > 1800 ? 'text-accent' : 'text-ink-faint'}`}>
+                    {profileFormData.editorial_body.length}/2000
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className={LABEL}>Contact email</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
+                        <Mail size={15} />
+                      </span>
+                      <input
+                        className={`${INPUT} pl-9`}
+                        type="email"
+                        value={profileFormData.contact_email}
+                        onChange={e => setProfileFormData(d => ({ ...d, contact_email: e.target.value }))}
+                        placeholder="orders@yourrestaurant.com"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>Website <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                    <input
+                      className={INPUT}
+                      type="url"
+                      value={profileFormData.website_url}
+                      onChange={e => setProfileFormData(d => ({ ...d, website_url: e.target.value }))}
+                      placeholder="https://yourkitchen.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>Instagram <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
+                        <Instagram size={15} />
+                      </span>
+                      <input
+                        className={`${INPUT} pl-9`}
+                        value={profileFormData.instagram_handle}
+                        onChange={e => setProfileFormData(d => ({ ...d, instagram_handle: e.target.value }))}
+                        placeholder="yourhandle"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>TikTok <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
+                        <TikTokIcon size={14} />
+                      </span>
+                      <input
+                        className={`${INPUT} pl-9`}
+                        value={profileFormData.tiktok_handle}
+                        onChange={e => setProfileFormData(d => ({ ...d, tiktok_handle: e.target.value }))}
+                        placeholder="yourhandle"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2 border-t border-line">
+                  <Button type="submit" disabled={profileSaving}>
+                    {profileSaving ? 'Saving…' : 'Save profile'}
+                  </Button>
+                  {profileSaved && (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-macro-green font-semibold animate-fadeIn">
+                      <Check size={14} /> Saved
+                    </span>
+                  )}
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleProfileSave} className="space-y-5">
-              <div>
-                <label className={LABEL}>Contact email</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
-                    <Mail size={15} />
-                  </span>
-                  <input
-                    className={`${INPUT} pl-9`}
-                    type="email"
-                    value={profileFormData.contact_email}
-                    onChange={e => setProfileFormData(d => ({ ...d, contact_email: e.target.value }))}
-                    placeholder="orders@yourrestaurant.com"
-                  />
-                </div>
-                <p className="text-[10px] text-ink-faint mt-1">Shown as a "Contact vendor" button on your public page.</p>
-              </div>
 
-              <div>
-                <label className={LABEL}>Instagram <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
-                    <Instagram size={15} />
-                  </span>
-                  <input
-                    className={`${INPUT} pl-9`}
-                    value={profileFormData.instagram_handle}
-                    onChange={e => setProfileFormData(d => ({ ...d, instagram_handle: e.target.value }))}
-                    placeholder="yourhandle"
-                    autoComplete="off"
-                  />
-                </div>
-                <p className="text-[10px] text-ink-faint mt-1">Without the @ — e.g. <span className="font-mono">yourhandle</span></p>
+            {/* Gallery */}
+            <div className={`${card} p-6 max-w-3xl`}>
+              <div className="mb-5">
+                <h3 className="font-display text-xl font-semibold text-ink">Photo gallery</h3>
+                <p className="text-ink-muted text-sm mt-1">
+                  Up to 12 photos. The first photo is the one diners see first when they land on your page. Drag & drop to upload; use the arrows to reorder.
+                </p>
               </div>
-
-              <div>
-                <label className={LABEL}>TikTok <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
-                    <TikTokIcon size={14} />
-                  </span>
-                  <input
-                    className={`${INPUT} pl-9`}
-                    value={profileFormData.tiktok_handle}
-                    onChange={e => setProfileFormData(d => ({ ...d, tiktok_handle: e.target.value }))}
-                    placeholder="yourhandle"
-                    autoComplete="off"
-                  />
-                </div>
-                <p className="text-[10px] text-ink-faint mt-1">Without the @ — e.g. <span className="font-mono">yourhandle</span></p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2 border-t border-line">
-                <Button type="submit" disabled={profileSaving}>
-                  {profileSaving ? 'Saving…' : 'Save profile'}
-                </Button>
-                {profileSaved && (
-                  <span className="inline-flex items-center gap-1.5 text-sm text-macro-green font-semibold animate-fadeIn">
-                    <Check size={14} /> Saved
-                  </span>
-                )}
-              </div>
-            </form>
+              {vendorId && <GalleryManager vendorId={vendorId} session={session} />}
+            </div>
           </div>
         )}
       </main>

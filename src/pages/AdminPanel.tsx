@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useClerk, useUser, useSession } from '@clerk/react';
-import { supabase, Meal } from '../lib/supabase';
+import { Meal } from '../lib/supabase';
 import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import { useMeals } from '../hooks/useMeals';
@@ -9,6 +9,7 @@ import { useCountUp } from '../hooks/useCountUp';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
 import DietaryTagPicker from '../components/DietaryTagPicker';
+import GalleryManager from '../components/GalleryManager';
 import { Trash2, Plus, LogOut, ChevronDown, UtensilsCrossed, BarChart2, Users, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -90,6 +91,8 @@ interface Vendor {
   description: string | null;
   instagram_handle: string | null;
   tiktok_handle: string | null;
+  website_url: string | null;
+  editorial_body: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -198,9 +201,9 @@ export default function AdminPanel() {
   const [expandedSuperadminId, setExpandedSuperadminId] = useState<string | null>(null);
   const [showVendorMemberFormVendorId, setShowVendorMemberFormVendorId] = useState<string | null>(null);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
-  const [editVendorFormData, setEditVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' });
+  const [editVendorFormData, setEditVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '', website_url: '', editorial_body: '' });
   const [editVendorLogoFile, setEditVendorLogoFile] = useState<File | null>(null);
-  const [vendorFormData, setVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' });
+  const [vendorFormData, setVendorFormData] = useState({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '', website_url: '', editorial_body: '' });
   const [vendorLogoFile, setVendorLogoFile] = useState<File | null>(null);
   const [superadminFormData, setSuperadminFormData] = useState({ clerk_user_id: '', display_name: '' });
   const [vendorMemberFormData, setVendorMemberFormData] = useState({ email: '', display_name: '' });
@@ -341,9 +344,9 @@ export default function AdminPanel() {
       let logoUrl = vendorFormData.logo_url || null;
       if (vendorLogoFile) logoUrl = await uploadVendorLogo(vendorLogoFile);
       const client = await getSupabaseWithAuth(session);
-      const { error } = await client.from('vendors').insert([{ name: vendorFormData.name, slug: vendorFormData.slug, contact_email: vendorFormData.contact_email, venmo_handle: vendorFormData.venmo_handle || null, zelle_contact: vendorFormData.zelle_contact || null, description: vendorFormData.description || null, logo_url: logoUrl, instagram_handle: vendorFormData.instagram_handle.replace(/^@/, '') || null, tiktok_handle: vendorFormData.tiktok_handle.replace(/^@/, '') || null, is_active: true }]);
+      const { error } = await client.from('vendors').insert([{ name: vendorFormData.name, slug: vendorFormData.slug, contact_email: vendorFormData.contact_email, venmo_handle: vendorFormData.venmo_handle || null, zelle_contact: vendorFormData.zelle_contact || null, description: vendorFormData.description || null, logo_url: logoUrl, instagram_handle: vendorFormData.instagram_handle.replace(/^@/, '') || null, tiktok_handle: vendorFormData.tiktok_handle.replace(/^@/, '') || null, website_url: vendorFormData.website_url.trim() || null, editorial_body: vendorFormData.editorial_body.trim() || null, is_active: true }]);
       if (error) throw error;
-      setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' });
+      setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '', website_url: '', editorial_body: '' });
       setVendorLogoFile(null); setShowVendorForm(false);
       fetchTeamData();
     } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
@@ -380,7 +383,7 @@ export default function AdminPanel() {
       let logoUrl = editVendorFormData.logo_url || null;
       if (editVendorLogoFile) logoUrl = await uploadVendorLogo(editVendorLogoFile);
       const client = await getSupabaseWithAuth(session);
-      const { error } = await client.from('vendors').update({ name: editVendorFormData.name, slug: editVendorFormData.slug, contact_email: editVendorFormData.contact_email, venmo_handle: editVendorFormData.venmo_handle || null, zelle_contact: editVendorFormData.zelle_contact || null, description: editVendorFormData.description || null, logo_url: logoUrl, instagram_handle: editVendorFormData.instagram_handle.replace(/^@/, '') || null, tiktok_handle: editVendorFormData.tiktok_handle.replace(/^@/, '') || null }).eq('id', vendorId);
+      const { error } = await client.from('vendors').update({ name: editVendorFormData.name, slug: editVendorFormData.slug, contact_email: editVendorFormData.contact_email, venmo_handle: editVendorFormData.venmo_handle || null, zelle_contact: editVendorFormData.zelle_contact || null, description: editVendorFormData.description || null, logo_url: logoUrl, instagram_handle: editVendorFormData.instagram_handle.replace(/^@/, '') || null, tiktok_handle: editVendorFormData.tiktok_handle.replace(/^@/, '') || null, website_url: editVendorFormData.website_url.trim() || null, editorial_body: editVendorFormData.editorial_body.trim() || null }).eq('id', vendorId);
       if (error) throw error;
       setEditingVendorId(null); setEditVendorLogoFile(null); fetchTeamData();
     } catch (err) { alert(`Failed: ${errorMessage(err)}`); }
@@ -726,7 +729,9 @@ export default function AdminPanel() {
                     <div><label className={LABEL}>Venmo <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.venmo_handle} onChange={e => setVendorFormData(d => ({ ...d, venmo_handle: e.target.value }))} /></div>
                     <div><label className={LABEL}>Instagram <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.instagram_handle} onChange={e => setVendorFormData(d => ({ ...d, instagram_handle: e.target.value }))} placeholder="handle (no @)" /></div>
                     <div><label className={LABEL}>TikTok <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} value={vendorFormData.tiktok_handle} onChange={e => setVendorFormData(d => ({ ...d, tiktok_handle: e.target.value }))} placeholder="handle (no @)" /></div>
-                    <div className="md:col-span-2 flex gap-3"><Button type="submit" disabled={vendorFormLoading}>{vendorFormLoading ? 'Adding…' : 'Add vendor'}</Button><Button type="button" variant="secondary" onClick={() => { setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '' }); setVendorLogoFile(null); setShowVendorForm(false); }}>Cancel</Button></div>
+                    <div className="md:col-span-2"><label className={LABEL}>Website <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} type="url" value={vendorFormData.website_url} onChange={e => setVendorFormData(d => ({ ...d, website_url: e.target.value }))} placeholder="https://…" /></div>
+                    <div className="md:col-span-2"><label className={LABEL}>Editorial intro <span className="normal-case font-normal text-ink-faint">(optional)</span></label><textarea className={`${INPUT} resize-y`} rows={4} value={vendorFormData.editorial_body} onChange={e => setVendorFormData(d => ({ ...d, editorial_body: e.target.value }))} placeholder="Long-form story shown on the vendor page. Line breaks are preserved." /><p className="text-[10px] text-ink-faint mt-1">Photo gallery can be managed after the vendor is created.</p></div>
+                    <div className="md:col-span-2 flex gap-3"><Button type="submit" disabled={vendorFormLoading}>{vendorFormLoading ? 'Adding…' : 'Add vendor'}</Button><Button type="button" variant="secondary" onClick={() => { setVendorFormData({ name: '', slug: '', contact_email: '', venmo_handle: '', zelle_contact: '', description: '', logo_url: '', instagram_handle: '', tiktok_handle: '', website_url: '', editorial_body: '' }); setVendorLogoFile(null); setShowVendorForm(false); }}>Cancel</Button></div>
                   </form>
                 </div>
               )}
@@ -749,7 +754,16 @@ export default function AdminPanel() {
                     </button>
 
                     {expandedVendorId === vendor.id && (
-                      <div className="border-t border-line p-5 space-y-5 bg-surface/30">
+                      <div className="border-t border-line p-5 space-y-6 bg-surface/30">
+                        {/* Photo gallery */}
+                        <div>
+                          <div className="flex items-baseline justify-between mb-3">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Photo gallery</p>
+                            <p className="text-[10px] text-ink-faint">Max 12 · drag & drop to upload</p>
+                          </div>
+                          <GalleryManager vendorId={vendor.id} session={session} />
+                        </div>
+
                         {/* Edit form */}
                         {editingVendorId === vendor.id ? (
                           <form onSubmit={e => handleVendorUpdate(e, vendor.id)} className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -769,11 +783,13 @@ export default function AdminPanel() {
                             <div><label className={LABEL}>Venmo</label><input className={INPUT} value={editVendorFormData.venmo_handle} onChange={e => setEditVendorFormData(d => ({ ...d, venmo_handle: e.target.value }))} /></div>
                             <div><label className={LABEL}>Instagram</label><input className={INPUT} value={editVendorFormData.instagram_handle} onChange={e => setEditVendorFormData(d => ({ ...d, instagram_handle: e.target.value }))} placeholder="handle (no @)" /></div>
                             <div><label className={LABEL}>TikTok</label><input className={INPUT} value={editVendorFormData.tiktok_handle} onChange={e => setEditVendorFormData(d => ({ ...d, tiktok_handle: e.target.value }))} placeholder="handle (no @)" /></div>
+                            <div className="md:col-span-2"><label className={LABEL}>Website <span className="normal-case font-normal text-ink-faint">(optional)</span></label><input className={INPUT} type="url" value={editVendorFormData.website_url} onChange={e => setEditVendorFormData(d => ({ ...d, website_url: e.target.value }))} placeholder="https://…" /></div>
+                            <div className="md:col-span-2"><label className={LABEL}>Editorial intro <span className="normal-case font-normal text-ink-faint">(optional)</span></label><textarea className={`${INPUT} resize-y`} rows={4} value={editVendorFormData.editorial_body} onChange={e => setEditVendorFormData(d => ({ ...d, editorial_body: e.target.value }))} placeholder="Long-form story shown on the vendor page. Line breaks are preserved." /></div>
                             <div className="md:col-span-2 flex gap-2"><Button type="submit" className="text-sm py-2" disabled={vendorUpdateLoading}>{vendorUpdateLoading ? 'Saving…' : 'Save'}</Button><Button type="button" variant="secondary" className="text-sm py-2" onClick={() => { setEditingVendorId(null); setEditVendorLogoFile(null); }}>Cancel</Button></div>
                           </form>
                         ) : (
                           <div className="flex flex-wrap gap-2">
-                            <button onClick={() => { setEditVendorFormData({ name: vendor.name, slug: vendor.slug, contact_email: vendor.contact_email, venmo_handle: vendor.venmo_handle ?? '', zelle_contact: vendor.zelle_contact ?? '', description: vendor.description ?? '', logo_url: vendor.logo_url ?? '', instagram_handle: vendor.instagram_handle ?? '', tiktok_handle: vendor.tiktok_handle ?? '' }); setEditVendorLogoFile(null); setEditingVendorId(vendor.id); }} className="px-3 py-1.5 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20">Edit details</button>
+                            <button onClick={() => { setEditVendorFormData({ name: vendor.name, slug: vendor.slug, contact_email: vendor.contact_email, venmo_handle: vendor.venmo_handle ?? '', zelle_contact: vendor.zelle_contact ?? '', description: vendor.description ?? '', logo_url: vendor.logo_url ?? '', instagram_handle: vendor.instagram_handle ?? '', tiktok_handle: vendor.tiktok_handle ?? '', website_url: vendor.website_url ?? '', editorial_body: vendor.editorial_body ?? '' }); setEditVendorLogoFile(null); setEditingVendorId(vendor.id); }} className="px-3 py-1.5 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20">Edit details</button>
                             <button onClick={() => handleVendorToggleActive(vendor)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${vendor.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-macro-green/10 text-macro-green hover:bg-macro-green/20'}`}>{vendor.is_active ? 'Deactivate' : 'Activate'}</button>
                             <button onClick={() => navigate(`/admin/vendor/${vendor.slug}`)} className="px-3 py-1.5 text-xs font-semibold bg-surface text-ink border border-line rounded-lg hover:bg-line">Open vendor panel →</button>
                           </div>

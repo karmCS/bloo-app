@@ -6,7 +6,15 @@ import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
-import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles } from 'lucide-react';
+import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles, Instagram, Mail, Check } from 'lucide-react';
+
+function TikTokIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.79 1.54V6.78a4.85 4.85 0 0 1-1.02-.09z" />
+    </svg>
+  );
+}
 
 const INPUT = 'w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors';
 const LABEL = 'block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1.5';
@@ -22,6 +30,10 @@ export default function VendorPanel() {
   const [vendorName, setVendorName] = useState<string | null>(null);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
   const [pageReady, setPageReady] = useState(false);
+  const [activeSection, setActiveSection] = useState<'menu' | 'profile'>('menu');
+  const [profileFormData, setProfileFormData] = useState({ contact_email: '', instagram_handle: '', tiktok_handle: '' });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
 
   const [meals, setMeals] = useState<Meal[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -78,7 +90,7 @@ export default function VendorPanel() {
     if (!user || !session || !slug) return;
     const init = async () => {
       const client = await getSupabaseWithAuth(session);
-      const { data: vendor } = await client.from('vendors').select('id, name').eq('slug', slug).maybeSingle();
+      const { data: vendor } = await client.from('vendors').select('id, name, contact_email, instagram_handle, tiktok_handle').eq('slug', slug).maybeSingle();
       if (!vendor) { navigate('/unauthorized', { replace: true }); return; }
 
       const { data: vendorUser } = await client.from('vendor_users').select('role, vendor_id').eq('clerk_user_id', user.id).maybeSingle();
@@ -89,6 +101,11 @@ export default function VendorPanel() {
       setIsSuperadmin(vendorUser.role === 'superadmin');
       setVendorId(vendor.id);
       setVendorName(vendor.name);
+      setProfileFormData({
+        contact_email: (vendor as { contact_email?: string | null }).contact_email ?? '',
+        instagram_handle: (vendor as { instagram_handle?: string | null }).instagram_handle ?? '',
+        tiktok_handle: (vendor as { tiktok_handle?: string | null }).tiktok_handle ?? '',
+      });
 
       const { data: mealsData } = await client.from('meals').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: false });
       if (mealsData) setMeals(mealsData as Meal[]);
@@ -176,6 +193,27 @@ export default function VendorPanel() {
     setUploadedFile(null); setEditingMeal(null); setShowForm(false);
   };
 
+  const handleProfileSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session || !vendorId) return;
+    setProfileSaving(true);
+    try {
+      const client = await getSupabaseWithAuth(session);
+      const { error } = await client.from('vendors').update({
+        contact_email: profileFormData.contact_email.trim() || null,
+        instagram_handle: profileFormData.instagram_handle.trim().replace(/^@/, '') || null,
+        tiktok_handle: profileFormData.tiktok_handle.trim().replace(/^@/, '') || null,
+      }).eq('id', vendorId);
+      if (error) throw error;
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
+    } catch (err) {
+      alert(`Failed to save profile: ${errorMessage(err)}`);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   if (!pageReady) {
     return (
       <div className="min-h-screen bg-page flex items-center justify-center">
@@ -220,7 +258,28 @@ export default function VendorPanel() {
         </div>
       </header>
 
+      {/* Section tabs */}
+      <div className="border-b border-line bg-card">
+        <div className="max-w-6xl mx-auto px-6 flex gap-1 pt-1">
+          {(['menu', 'profile'] as const).map(section => (
+            <button
+              key={section}
+              type="button"
+              onClick={() => setActiveSection(section)}
+              className={`px-4 py-2.5 text-sm font-semibold capitalize rounded-t-lg border-b-2 transition-colors duration-150 ${
+                activeSection === section
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-ink-muted hover:text-ink'
+              }`}
+            >
+              {section}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <main className="max-w-6xl mx-auto px-6 py-10 space-y-6 animate-fadeIn">
+        {activeSection === 'menu' && <>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-2xl font-semibold text-ink">Menu</h2>
@@ -362,6 +421,80 @@ export default function VendorPanel() {
             </div>
           )}
         </div>
+        </>}
+
+        {/* Profile section */}
+        {activeSection === 'profile' && (
+          <div className={`${card} p-6 max-w-xl animate-liftIn`}>
+            <div className="mb-6">
+              <h2 className="font-display text-2xl font-semibold text-ink">Profile</h2>
+              <p className="text-ink-muted text-sm mt-1">Social handles and contact info shown on your public page.</p>
+            </div>
+            <form onSubmit={handleProfileSave} className="space-y-5">
+              <div>
+                <label className={LABEL}>Contact email</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
+                    <Mail size={15} />
+                  </span>
+                  <input
+                    className={`${INPUT} pl-9`}
+                    type="email"
+                    value={profileFormData.contact_email}
+                    onChange={e => setProfileFormData(d => ({ ...d, contact_email: e.target.value }))}
+                    placeholder="orders@yourrestaurant.com"
+                  />
+                </div>
+                <p className="text-[10px] text-ink-faint mt-1">Shown as a "Contact vendor" button on your public page.</p>
+              </div>
+
+              <div>
+                <label className={LABEL}>Instagram <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
+                    <Instagram size={15} />
+                  </span>
+                  <input
+                    className={`${INPUT} pl-9`}
+                    value={profileFormData.instagram_handle}
+                    onChange={e => setProfileFormData(d => ({ ...d, instagram_handle: e.target.value }))}
+                    placeholder="yourhandle"
+                    autoComplete="off"
+                  />
+                </div>
+                <p className="text-[10px] text-ink-faint mt-1">Without the @ — e.g. <span className="font-mono">yourhandle</span></p>
+              </div>
+
+              <div>
+                <label className={LABEL}>TikTok <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none">
+                    <TikTokIcon size={14} />
+                  </span>
+                  <input
+                    className={`${INPUT} pl-9`}
+                    value={profileFormData.tiktok_handle}
+                    onChange={e => setProfileFormData(d => ({ ...d, tiktok_handle: e.target.value }))}
+                    placeholder="yourhandle"
+                    autoComplete="off"
+                  />
+                </div>
+                <p className="text-[10px] text-ink-faint mt-1">Without the @ — e.g. <span className="font-mono">yourhandle</span></p>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2 border-t border-line">
+                <Button type="submit" disabled={profileSaving}>
+                  {profileSaving ? 'Saving…' : 'Save profile'}
+                </Button>
+                {profileSaved && (
+                  <span className="inline-flex items-center gap-1.5 text-sm text-macro-green font-semibold animate-fadeIn">
+                    <Check size={14} /> Saved
+                  </span>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
       </main>
 
       {/* Macro estimation modal */}

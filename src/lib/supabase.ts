@@ -18,6 +18,9 @@ export interface Vendor {
   name: string;
   logo_url?: string | null;
   description?: string | null;
+  contact_email?: string | null;
+  instagram_handle?: string | null;
+  tiktok_handle?: string | null;
 }
 
 export interface Meal {

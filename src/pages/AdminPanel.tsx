@@ -8,6 +8,7 @@ import { useReveal } from '../hooks/useReveal';
 import { useCountUp } from '../hooks/useCountUp';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
+import DietaryTagPicker from '../components/DietaryTagPicker';
 import { Trash2, Plus, LogOut, ChevronDown, UtensilsCrossed, BarChart2, Users, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -149,7 +150,7 @@ export default function AdminPanel() {
   const [formData, setFormData] = useState({
     name: '', vendor: '', vendor_id: '', description: '', image_url: '',
     price: '', calories: '', protein: '', carbs: '', fats: '',
-    ingredients: '', dietary_tags: '', is_meal_of_week: false,
+    ingredients: '', dietary_tags: [] as string[], is_meal_of_week: false,
   });
 
   const estimateMacros = async () => {
@@ -283,7 +284,7 @@ export default function AdminPanel() {
         carbs: parseInt(formData.carbs) || 0,
         fats: parseInt(formData.fats) || 0,
         ingredients: formData.ingredients.split(',').map(i => i.trim()),
-        dietary_tags: formData.dietary_tags ? formData.dietary_tags.split(',').map(t => t.trim()) : [],
+        dietary_tags: formData.dietary_tags,
         is_meal_of_week: formData.is_meal_of_week,
       };
 
@@ -312,7 +313,7 @@ export default function AdminPanel() {
       price: meal.price.toString(), calories: meal.calories.toString(),
       protein: meal.protein.toString(), carbs: meal.carbs.toString(),
       fats: meal.fats.toString(), ingredients: meal.ingredients.join(', '),
-      dietary_tags: meal.dietary_tags.join(', '),
+      dietary_tags: meal.dietary_tags,
       is_meal_of_week: meal.is_meal_of_week ?? false,
     });
     setShowForm(true);
@@ -327,7 +328,7 @@ export default function AdminPanel() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', vendor: '', vendor_id: '', description: '', image_url: '', price: '', calories: '', protein: '', carbs: '', fats: '', ingredients: '', dietary_tags: '', is_meal_of_week: false });
+    setFormData({ name: '', vendor: '', vendor_id: '', description: '', image_url: '', price: '', calories: '', protein: '', carbs: '', fats: '', ingredients: '', dietary_tags: [], is_meal_of_week: false });
     setUploadedFile(null); setEditingMeal(null); setShowForm(false);
   };
 
@@ -550,7 +551,10 @@ export default function AdminPanel() {
                       </div>
                       <div>
                         <label className={LABEL}>Dietary tags <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
-                        <input className={INPUT} value={formData.dietary_tags} onChange={e => setFormData(d => ({ ...d, dietary_tags: e.target.value }))} placeholder="keto, gluten-free, high-protein" />
+                        <DietaryTagPicker
+                          selected={formData.dietary_tags}
+                          onChange={tags => setFormData(d => ({ ...d, dietary_tags: tags }))}
+                        />
                       </div>
                     </div>
                   </div>

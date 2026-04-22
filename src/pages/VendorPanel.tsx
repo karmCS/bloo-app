@@ -6,6 +6,7 @@ import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
+import DietaryTagPicker from '../components/DietaryTagPicker';
 import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles } from 'lucide-react';
 
 const INPUT = 'w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors';
@@ -37,7 +38,7 @@ export default function VendorPanel() {
   const [formData, setFormData] = useState({
     name: '', description: '', image_url: '',
     price: '', calories: '', protein: '', carbs: '', fats: '',
-    ingredients: '', dietary_tags: '', is_meal_of_week: false,
+    ingredients: '', dietary_tags: [] as string[], is_meal_of_week: false,
   });
 
   const estimateMacros = async () => {
@@ -129,8 +130,8 @@ export default function VendorPanel() {
         protein: parseInt(formData.protein) || 0, carbs: parseInt(formData.carbs) || 0,
         fats: parseInt(formData.fats) || 0,
         ingredients: formData.ingredients.split(',').map(i => i.trim()),
-        dietary_tags: formData.dietary_tags ? formData.dietary_tags.split(',').map(t => t.trim()) : [],
-        is_meal_of_week: formData.is_meal_of_week,
+        dietary_tags: formData.dietary_tags,
+        ...(isSuperadmin ? { is_meal_of_week: formData.is_meal_of_week } : {}),
       };
 
       const client = await getSupabaseWithAuth(session);
@@ -157,7 +158,7 @@ export default function VendorPanel() {
       price: meal.price.toString(), calories: meal.calories.toString(),
       protein: meal.protein.toString(), carbs: meal.carbs.toString(),
       fats: meal.fats.toString(), ingredients: meal.ingredients.join(', '),
-      dietary_tags: meal.dietary_tags.join(', '), is_meal_of_week: meal.is_meal_of_week ?? false,
+      dietary_tags: meal.dietary_tags, is_meal_of_week: meal.is_meal_of_week ?? false,
     });
     setShowForm(true);
   };
@@ -172,7 +173,7 @@ export default function VendorPanel() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', image_url: '', price: '', calories: '', protein: '', carbs: '', fats: '', ingredients: '', dietary_tags: '', is_meal_of_week: false });
+    setFormData({ name: '', description: '', image_url: '', price: '', calories: '', protein: '', carbs: '', fats: '', ingredients: '', dietary_tags: [], is_meal_of_week: false });
     setUploadedFile(null); setEditingMeal(null); setShowForm(false);
   };
 
@@ -298,7 +299,10 @@ export default function VendorPanel() {
                   </div>
                   <div>
                     <label className={LABEL}>Dietary tags <span className="normal-case font-normal text-ink-faint">(optional)</span></label>
-                    <input className={INPUT} value={formData.dietary_tags} onChange={e => setFormData(d => ({ ...d, dietary_tags: e.target.value }))} placeholder="keto, gluten-free, high-protein" />
+                    <DietaryTagPicker
+                      selected={formData.dietary_tags}
+                      onChange={tags => setFormData(d => ({ ...d, dietary_tags: tags }))}
+                    />
                   </div>
                 </div>
               </div>

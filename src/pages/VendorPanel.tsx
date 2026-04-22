@@ -6,6 +6,7 @@ import { getSupabaseWithAuth } from '../lib/supabaseWithAuth';
 import { assertValidImage, extFor, errorMessage } from '../lib/uploads';
 import Button from '../components/Button';
 import ImageUpload from '../components/ImageUpload';
+import { getCurrentWeekId, getWeekLabel } from '../lib/weekUtils';
 import { Trash2, Plus, LogOut, UserCog, ChevronLeft, Sparkles } from 'lucide-react';
 
 const INPUT = 'w-full rounded-xl border border-line bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors';
@@ -34,6 +35,9 @@ export default function VendorPanel() {
   const [macroInput, setMacroInput] = useState('');
   const [isEstimating, setIsEstimating] = useState(false);
   const [macroError, setMacroError] = useState<string | null>(null);
+  const [weekAvailability, setWeekAvailability] = useState<Record<string, boolean>>({});
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const currentWeekId = getCurrentWeekId();
   const [formData, setFormData] = useState({
     name: '', description: '', image_url: '',
     price: '', calories: '', protein: '', carbs: '', fats: '',
@@ -92,6 +96,15 @@ export default function VendorPanel() {
 
       const { data: mealsData } = await client.from('meals').select('*').eq('vendor_id', vendor.id).order('created_at', { ascending: false });
       if (mealsData) setMeals(mealsData as Meal[]);
+
+      const { data: availData } = await client
+        .from('meal_availability')
+        .select('meal_id, is_available')
+        .eq('vendor_id', vendor.id)
+        .eq('week_id', currentWeekId);
+      const availMap: Record<string, boolean> = {};
+      for (const row of availData ?? []) availMap[row.meal_id] = row.is_available;
+      setWeekAvailability(availMap);
       setPageReady(true);
     };
     init();
@@ -102,6 +115,39 @@ export default function VendorPanel() {
     const client = await getSupabaseWithAuth(session);
     const { data } = await client.from('meals').select('*').eq('vendor_id', vendorId).order('created_at', { ascending: false });
     if (data) setMeals(data as Meal[]);
+    const { data: availData } = await client
+      .from('meal_availability')
+      .select('meal_id, is_available')
+      .eq('vendor_id', vendorId)
+      .eq('week_id', currentWeekId);
+    const map: Record<string, boolean> = {};
+    for (const row of availData ?? []) map[row.meal_id] = row.is_available;
+    setWeekAvailability(map);
+  };
+
+  const toggleAvailability = async (mealId: string) => {
+    if (!session || !vendorId || togglingId) return;
+    const current = weekAvailability[mealId] ?? false;
+    const next = !current;
+    setTogglingId(mealId);
+    setWeekAvailability(prev => ({ ...prev, [mealId]: next }));
+    try {
+      const client = await getSupabaseWithAuth(session);
+      const { error } = await client
+        .from('meal_availability')
+        .upsert(
+          { meal_id: mealId, vendor_id: vendorId, week_id: currentWeekId, is_available: next, updated_at: new Date().toISOString() },
+          { onConflict: 'meal_id,week_id' }
+        );
+      if (error) {
+        setWeekAvailability(prev => ({ ...prev, [mealId]: current }));
+        throw error;
+      }
+    } catch (err) {
+      alert(`Failed to update availability: ${errorMessage(err)}`);
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const uploadImage = async (file: File) => {
@@ -232,6 +278,47 @@ export default function VendorPanel() {
           <Button onClick={() => { setShowForm(!showForm); if (showForm) resetForm(); }} className="sheen flex items-center gap-2">
             <Plus size={16} />{showForm ? 'Cancel' : 'Add meal'}
           </Button>
+        </div>
+
+        {/* This Week's Menu */}
+        <div className={card}>
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">This Week's Menu</h3>
+              <p className="text-xs text-ink-muted mt-0.5">{getWeekLabel(currentWeekId)}</p>
+            </div>
+            <span className="text-xs font-medium text-ink-muted tabular-nums">
+              {Object.values(weekAvailability).filter(Boolean).length}/{meals.length} available
+            </span>
+          </div>
+          {meals.length === 0 ? (
+            <p className="p-8 text-center text-sm text-ink-muted">Add meals to configure weekly availability.</p>
+          ) : (
+            <ul className="divide-y divide-line">
+              {meals.map(meal => {
+                const isAvailable = weekAvailability[meal.id] ?? false;
+                const isToggling = togglingId === meal.id;
+                return (
+                  <li key={meal.id} className="flex items-center gap-3 px-5 py-3">
+                    <img src={meal.image_url} alt={meal.name} className="w-10 h-10 rounded-xl object-cover border border-line flex-shrink-0" />
+                    <span className="flex-1 min-w-0 text-sm font-medium text-ink truncate">{meal.name}</span>
+                    <button
+                      type="button"
+                      disabled={isToggling}
+                      onClick={() => toggleAvailability(meal.id)}
+                      className={`flex-shrink-0 min-w-[140px] px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-60 ${
+                        isAvailable
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                          : 'bg-surface border-line text-ink-muted hover:bg-line'
+                      }`}
+                    >
+                      {isToggling ? '…' : isAvailable ? '✓ Available this week' : 'Off this week'}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
 
         {/* Meal form */}
